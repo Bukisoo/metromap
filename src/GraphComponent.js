@@ -31,44 +31,7 @@ const GraphComponent = ({
 }) => {
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
-
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-      const fetchedStations = await fetchStations(latitude, longitude);
-      setStations(fetchedStations);
-      // Add the initial node with a random station name
-      const randomStation = fetchedStations[Math.floor(Math.random() * fetchedStations.length)] || "New Node";
-      setNodes([
-        {
-          id: 'main',
-          name: randomStation,
-          color: '#e0e0e0',  // Main node color
-          notes: '',
-          children: [
-            { id: 'child-1', name: 'Child 1', color: colorPalette[Math.floor(Math.random() * colorPalette.length)], notes: '', children: [] },
-            { id: 'child-2', name: 'Child 2', color: colorPalette[Math.floor(Math.random() * colorPalette.length)], notes: '', children: [] }
-          ],
-          childrenHidden: false
-        }
-      ]);
-    }, () => {
-      // Handle geolocation error (e.g., user denied permission)
-      setNodes([
-        {
-          id: 'main',
-          name: 'Main Node',
-          color: '#e0e0e0',  // Main node color
-          notes: '',
-          children: [
-            { id: 'child-1', name: 'Child 1', color: colorPalette[Math.floor(Math.random() * colorPalette.length)], notes: '', children: [] },
-            { id: 'child-2', name: 'Child 2', color: colorPalette[Math.floor(Math.random() * colorPalette.length)], notes: '', children: [] }
-          ],
-          childrenHidden: false
-        }
-      ]);
-    });
-  }, []);
+  const zoomRef = useRef(d3.zoomIdentity);
 
   useEffect(() => {
     if (svgRef.current) {
@@ -82,13 +45,6 @@ const GraphComponent = ({
     }
   }, [selectedNode]);
 
-  const fetchStations = async (latitude, longitude) => {
-    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:10000,${latitude},${longitude})[public_transport=station];out;`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.elements.map(element => element.tags.name).filter(name => name);
-  };
-
   const getNodeColor = (node) => node.color || '#4a4a4a';
 
   const getNodeLevel = (nodes, id, level = 0) => {
@@ -100,19 +56,6 @@ const GraphComponent = ({
       }
     }
     return -1;
-  };
-
-  const getParentNode = (nodes, id) => {
-    for (let node of nodes) {
-      if (node.children) {
-        for (let child of node.children) {
-          if (child.id === id) return node;
-        }
-        let found = getParentNode(node.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
   };
 
   const flattenNodes = (nodes) => {
@@ -162,13 +105,14 @@ const GraphComponent = ({
 
     const zoomGroup = svg.append('g')
       .attr('class', 'zoom-group')
-      .attr('transform', d3.zoomIdentity);
+      .attr('transform', zoomRef.current);
 
     // Add zoom behavior
     const zoom = d3.zoom()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
         zoomGroup.attr('transform', event.transform);
+        zoomRef.current = event.transform;
       });
 
     svg.call(zoom);
@@ -409,11 +353,19 @@ const GraphComponent = ({
       const binBounds = binButton.node().getBoundingClientRect();
       const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
 
+      const zoomTransform = zoomRef.current;
+      const adjustedBinBounds = {
+        left: binBounds.left * zoomTransform.k + zoomTransform.x,
+        right: binBounds.right * zoomTransform.k + zoomTransform.x,
+        top: binBounds.top * zoomTransform.k + zoomTransform.y,
+        bottom: binBounds.bottom * zoomTransform.k + zoomTransform.y,
+      };
+
       if (
-        nodeBounds.left < binBounds.right &&
-        nodeBounds.right > binBounds.left &&
-        nodeBounds.top < binBounds.bottom &&
-        nodeBounds.bottom > binBounds.top
+        nodeBounds.left < adjustedBinBounds.right &&
+        nodeBounds.right > adjustedBinBounds.left &&
+        nodeBounds.top < adjustedBinBounds.bottom &&
+        nodeBounds.bottom > adjustedBinBounds.top
       ) {
         confirmAndRemoveNode(d);
       } else {
@@ -457,8 +409,8 @@ const GraphComponent = ({
       color: '#e0e0e0', // Default to main node color
       notes: '',
       children: [],
-      x: width / 2,
-      y: height / 2,
+      x: (width / 2 - zoomRef.current.x) / zoomRef.current.k,
+      y: (height / 2 - zoomRef.current.y) / zoomRef.current.k,
       childrenHidden: false
     };
     setNodes(prevNodes => {
@@ -534,6 +486,25 @@ const GraphComponent = ({
     return nextColor;
   };
 
+  const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
+    const updateColor = (nodes) => {
+      return nodes.map(n => {
+        if (n.color === originalColor) {
+          n.color = newColor;
+        }
+        if (n.children) {
+          n.children = updateColor(n.children);
+        }
+        return n;
+      });
+    };
+    node.color = newColor;
+    if (node.children) {
+      node.children = updateColor(node.children);
+    }
+    return node;
+  };
+
   const connectNodes = (sourceNode, targetNode) => {
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
 
@@ -556,9 +527,11 @@ const GraphComponent = ({
       return nodes.map(node => {
         if (node.id === targetNode.id && !isDescendant(sourceNode, node)) {
           const newColor = getNodeColor(targetNode) === '#e0e0e0' ? getNextColor(usedColors) : getNodeColor(targetNode);
+          const originalColor = getNodeColor(sourceNode);
+          sourceNode = updateNodeAndChildrenColors(sourceNode, newColor, originalColor);
           return {
             ...node,
-            children: [...(node.children || []), { ...sourceNode, color: newColor }]
+            children: [...(node.children || []), sourceNode]
           };
         } else if (node.children) {
           return {

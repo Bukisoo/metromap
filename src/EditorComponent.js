@@ -14,49 +14,51 @@ const EditorComponent = ({
   const lineNumbersRef = useRef(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#000000');
-  const [infoType, setInfoType] = useState('Text');
 
   useEffect(() => {
     if (editorRef.current && selectedNode) {
-      quillRef.current = new Quill(editorRef.current, {
-        theme: 'snow',
-        modules: {
-          toolbar: infoType === 'Text' ? [
-            [{ 'header': [1, 2, false] }],
-            ['bold', 'italic', 'underline'],
-            ['image', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'size': ['small', false, 'large', 'huge'] }],
-            ['clean']
-          ] : false,
-        },
-      });
-
-      quillRef.current.on('text-change', () => {
-        const content = quillRef.current.root.innerHTML;
-        setEditorContent(prev => ({
-          ...prev,
-          [selectedNode.id]: {
-            ...prev[selectedNode.id],
-            notes: content
+      if (!quillRef.current) {
+        quillRef.current = new Quill(editorRef.current, {
+          theme: 'snow',
+          modules: {
+            toolbar: [
+              [{ 'header': [1, 2, false] }],
+              ['bold', 'italic', 'underline'],
+              ['image', 'code-block'],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+              [{ 'size': ['small', false, 'large', 'huge'] }],
+              ['clean']
+            ]
           }
-        }));
-        updateNodeProperty(selectedNode.id, 'notes', content);
-        updateLineNumbers();
-      });
+        });
 
-      if (editorContent[selectedNode.id]?.notes) {
-        quillRef.current.root.innerHTML = editorContent[selectedNode.id].notes;
+        quillRef.current.on('text-change', () => {
+          const content = quillRef.current.root.innerHTML;
+          setEditorContent(prev => ({
+            ...prev,
+            [selectedNode.id]: {
+              ...prev[selectedNode.id],
+              notes: content
+            }
+          }));
+          updateNodeProperty(selectedNode.id, 'notes', content);
+          updateLineNumbers();
+        });
       }
+
+      // Load content for the selected node
+      const nodeContent = editorContent[selectedNode.id]?.notes || selectedNode.notes || '';
+      quillRef.current.root.innerHTML = nodeContent;
 
       updateLineNumbers();
     }
-  }, [selectedNode, infoType]);
+  }, [selectedNode, editorContent]);
 
   const updateLineNumbers = () => {
     if (quillRef.current && lineNumbersRef.current) {
       const lines = quillRef.current.getLines().length;
-      const lineNumbersContent = Array.from({ length: lines }, (_, i) => `<div>${i + 1}</div>`).join('');
+      const lineHeights = Array.from(quillRef.current.root.querySelectorAll('.ql-editor > *')).map(line => line.offsetHeight);
+      const lineNumbersContent = lineHeights.map((height, index) => `<div style="height: ${height}px;">${index + 1}</div>`).join('');
       lineNumbersRef.current.innerHTML = lineNumbersContent;
     }
   };
@@ -73,10 +75,6 @@ const EditorComponent = ({
     updateNodeProperty(selectedNode.id, 'color', color.hex);
   };
 
-  const handleInfoTypeChange = (event) => {
-    setInfoType(event.target.value);
-  };
-
   return (
     <div className={`editor-container ${selectedNode ? 'visible' : ''}`}>
       {selectedNode && (
@@ -84,7 +82,7 @@ const EditorComponent = ({
           <div className="editor-header">
             <input
               type="text"
-              value={editorContent[selectedNode.id]?.title || ''}
+              value={editorContent[selectedNode.id]?.title || selectedNode.name || ''}
               onChange={(e) => {
                 const newTitle = e.target.value;
                 setEditorContent(prev => ({
@@ -109,39 +107,12 @@ const EditorComponent = ({
                   onChangeComplete={handleColorChange}
                 />
               )}
-              <select value={infoType} onChange={handleInfoTypeChange} className="editor-tool-select">
-                <option value="Text">Text</option>
-                <option value="Code">Code</option>
-                <option value="Link">Link</option>
-                <option value="Draw">Draw</option>
-              </select>
             </div>
           </div>
           <div className="editor-body">
             <div className="quill-container">
               <div className="line-numbers" ref={lineNumbersRef}></div>
-              {infoType === 'Text' && (
-                <div ref={editorRef} className="quill-editor"></div>
-              )}
-              {infoType === 'Code' && (
-                <textarea
-                  value={editorContent[selectedNode.id]?.notes || ''}
-                  onChange={(e) => {
-                    const newNotes = e.target.value;
-                    setEditorContent(prev => ({
-                      ...prev,
-                      [selectedNode.id]: {
-                        ...prev[selectedNode.id],
-                        notes: newNotes
-                      }
-                    }));
-                    updateNodeProperty(selectedNode.id, 'notes', newNotes);
-                    updateLineNumbers();
-                  }}
-                  placeholder="Enter code here..."
-                  className="code-editor"
-                />
-              )}
+              <div ref={editorRef} className="quill-editor"></div>
             </div>
           </div>
         </div>
@@ -150,4 +121,4 @@ const EditorComponent = ({
   );
 };
 
-export default EditorComponent;
+export default EditorComponent

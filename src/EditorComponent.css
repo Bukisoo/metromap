@@ -1,138 +1,100 @@
 .editor-container {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 50%;
-    height: 100%;
-    background: #2e2e2e;
-    color: #fff;
-    overflow-y: auto;
-    display: none;
-    transition: all 0.3s ease;
-  }
-  
-  .editor-container.visible {
-    display: block;
-  }
-  
-  .editor-content {
-    padding: 20px;
-  }
-  
-  .editor-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  
-  .editor-title {
-    flex-grow: 1;
-    padding: 5px;
-    margin-right: 10px;
-  }
-  
-  .editor-tools {
-    display: flex;
-    align-items: center;
-  }
-  
-  .editor-tool-button {
-    background: #444;
-    color: #fff;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-    margin-right: 10px;
-  }
-  
-  .editor-tool-select {
-    padding: 5px;
-  }
-  
-  .editor-body {
-    display: flex;
-    height: calc(100% - 60px);
-  }
-  
-  .quill-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-  }
-  
-  .text-editor-container {
-    position: relative;
-    flex-grow: 1;
-    display: flex;
-  }
-  
-  .line-numbers {
-    position: absolute;
-    left: 0; /* Align to the left edge */
-    top: 0;
-    padding: 10px 5px;
-    text-align: right;
-    user-select: none;
-    background: #1e1e1e; /* Make sure this matches the editor theme */
-    color: #888;
-    width: 30px; /* Adjust based on your design */
-    overflow: hidden;
-  }
-  
-  .code-editor {
-    position: relative;
-    left: 30px; /* Offset by the width of line numbers */
-    width: calc(100% - 30px); /* Adjust width considering the line numbers */
-    height: 100%;
-    background: #fff;
-    color: #000;
-    font-family: monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 10px;
-    border: none;
-    resize: none;
-    outline: none;
-  }
-  
-  .line-numbers div {
-    height: 1.4em; /* Adjust to match line height of your editor */
-  }
-  
-  .quill-editor {
-    width: calc(100% - 40px); /* Adjust width to leave space for line numbers */
-    margin-left: 40px; /* Space for line numbers */
-    background: #fff;
-    color: #000;
-    padding: 10px;
-    font-size: var(--editor-font-size, 14px);
-    border: none;
-    outline: none;
-  }
-  
-  .ql-toolbar {
-    background: #1e1e1e;
-    border: none;
-  }
-  
-  .ql-container {
-    font-size: 14px;
-    height: calc(100% - 42px);
-  }
-  
-  .code-editor {
-    width: calc(100% - 40px); /* Adjust width to leave space for line numbers */
-    margin-left: 40px; /* Space for line numbers */
-    height: 100%;
-    background: #fff;
-    color: #000;
-    font-family: monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 10px;
-    border: none;
-    resize: none;
-  }
-  
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: #2e2e2e;
+  color: #fff;
+  overflow-y: auto;
+  display: none;
+  transition: all 0.3s ease;
+}
+
+.editor-container.visible {
+  display: block;
+}
+
+.editor-content {
+  padding: 20px;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.editor-title {
+  flex-grow: 1;
+  padding: 5px;
+  margin-right: 10px;
+}
+
+.editor-tools {
+  display: flex;
+  align-items: center;
+}
+
+.editor-tool-button {
+  background: #444;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.editor-body {
+  display: flex;
+  height: calc(100% - 60px);
+}
+
+.quill-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.line-numbers {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 10px 5px;
+  text-align: right;
+  user-select: none;
+  background: #1e1e1e;
+  color: #888;
+  width: 30px;
+  overflow: hidden;
+}
+
+.line-numbers div {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 5px;
+}
+
+.quill-editor {
+  width: calc(100% - 40px);
+  margin-left: 40px;
+  background: #fff;
+  color: #000;
+  padding: 10px;
+  font-size: var(--editor-font-size, 14px);
+  border: none;
+  outline: none;
+}
+
+.ql-toolbar {
+  background: #1e1e1e;
+  border: none;
+}
+
+.ql-container {
+  font-size: 14px;
+  height: calc(100% - 42px);
+}
