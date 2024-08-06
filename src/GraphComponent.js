@@ -85,8 +85,10 @@ const GraphComponent = ({
   };
 
   const createForceDirectedGraph = () => {
-    const width = window.innerWidth / (isEditorVisible ? 2 : 1);
-    const height = window.innerHeight;
+    const width = 10000; 
+    const height = 10000; 
+    const viewWidth = window.innerWidth / (isEditorVisible ? 2 : 1); // Get the actual viewport width
+    const viewHeight = window.innerHeight; // Get the actual viewport height
 
     const svg = d3.select(svgRef.current)
       .attr('width', width)
@@ -123,13 +125,15 @@ const GraphComponent = ({
     const simulation = d3.forceSimulation(flatNodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(100))
       .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('center', d3.forceCenter(width / 2, height / 2)) // Center in the middle of the large canvas
       .force('collision', d3.forceCollide().radius(30))
       .force('x', d3.forceX(width / 2).strength(0.1))
       .force('y', d3.forceY(height / 2).strength(0.1))
       .alphaDecay(0.05);
 
     simulationRef.current = simulation;
+
+    svg.call(zoom.transform, d3.zoomIdentity.translate(viewWidth / 2 - width / 2, viewHeight / 2 - height / 2));
 
     const linkGroup = zoomGroup.append('g').attr('class', 'links');
 
@@ -399,18 +403,18 @@ const GraphComponent = ({
       .classed('glow', true);
   };
 
-  const addNode = () => {
+const addNode = () => {
     const randomStation = stations[Math.floor(Math.random() * stations.length)] || "New Node";
-    const width = window.innerWidth / 2;
-    const height = window.innerHeight;
+    const width = 10000; // Large canvas width
+    const height = 10000; // Large canvas height
     const newNode = {
       id: `node-${Date.now()}`,
       name: randomStation,
       color: '#e0e0e0', // Default to main node color
       notes: '',
       children: [],
-      x: (width / 2 - zoomRef.current.x) / zoomRef.current.k,
-      y: (height / 2 - zoomRef.current.y) / zoomRef.current.k,
+      x: width / 2, // Center the node in the large canvas
+      y: height / 2, // Center the node in the large canvas
       childrenHidden: false
     };
     setNodes(prevNodes => {

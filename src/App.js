@@ -191,6 +191,8 @@ const App = () => {
         editorContent={editorContent}
         setEditorContent={setEditorContent}
         updateNodeProperty={updateNodeProperty}
+        isOpen={isEditorVisible}
+        
       />
       <div className="accent-bar"></div>
     </div>
