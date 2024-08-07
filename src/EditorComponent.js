@@ -21,13 +21,20 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const isInitialLoadRef = useRef(true);
+  const currentNodeRef = useRef(null);
+  const lastLoadedNodeIdRef = useRef(null);
 
-  const saveContent = useCallback(debounce((content) => {
-    if (selectedNode && !isLoading) {
-      console.log("Saving content:", content);
-      updateNodeProperty(selectedNode.id, 'notes', content);
+  const saveContent = useCallback((content, nodeId) => {
+    if (nodeId && !isLoading) {
+      console.log("Saving content for node:", nodeId);
+      updateNodeProperty(nodeId, 'notes', content);
     }
-  }, 1000), [selectedNode, isLoading]);
+  }, [updateNodeProperty, isLoading]);
+
+  const debouncedSaveContent = useCallback(
+    debounce((content, nodeId) => saveContent(content, nodeId), 1000),
+    [saveContent]
+  );
 
   const initializeQuill = () => {
     if (editorRef.current && !quillRef.current) {
@@ -52,8 +59,8 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       const handleTextChange = () => {
         if (!isLoading && !isInitialLoadRef.current) {
           const content = quillRef.current.root.innerHTML;
-          console.log("Text changed:", content);
-          saveContent(content);
+          console.log("Text changed for node:", currentNodeRef.current);
+          debouncedSaveContent(content, currentNodeRef.current);
         }
       };
 
@@ -109,17 +116,23 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
   };
 
   useEffect(() => {
-    console.log("Node selected:", selectedNode);
+    if (isOpen && selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
+      console.log("Node selected:", selectedNode);
 
-    if (selectedNode) {
+      // Cancel any pending debounced saves for the previous node
+      debouncedSaveContent.cancel();
+
       setTitle(selectedNode.name);
       setSelectedColor(selectedNode.color || '#000000');
+      currentNodeRef.current = selectedNode.id;
+      lastLoadedNodeIdRef.current = selectedNode.id;
+      
       if (quillRef.current) {
         console.log("Loading content for node:", selectedNode.id);
         loadContentProgressively(selectedNode.notes || '');
       }
     }
-  }, [selectedNode]);
+  }, [selectedNode, isOpen, debouncedSaveContent]);
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;

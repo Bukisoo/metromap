@@ -41,9 +41,9 @@ const GraphComponent = ({
 
   useEffect(() => {
     if (selectedNode) {
-      applyGlowEffect(selectedNode);
+      applyGlowEffect();
     }
-  }, [selectedNode]);
+  }, [selectedNode, nodes]);
 
   const getNodeColor = (node) => node.color || '#4a4a4a';
 
@@ -389,18 +389,16 @@ const GraphComponent = ({
     }
   };
 
-  const applyGlowEffect = (selectedNode) => {
+  const applyGlowEffect = () => {
     const svg = d3.select(svgRef.current);
+    svg.selectAll('.node-circle').classed('glow', false); // Remove glow from all nodes
 
-    // Remove glow from all nodes
-    svg.selectAll('.node-circle').classed('glow', false);
-
-    if (!selectedNode) return;
-
-    // Apply glow only to the selected node
-    svg.selectAll('.node-circle')
-      .filter(node => node.id === selectedNode.id)
-      .classed('glow', true);
+    if (selectedNode) {
+      // Apply glow only to the selected node
+      svg.selectAll('.node-circle')
+        .filter(node => node.id === selectedNode.id)
+        .classed('glow', true);
+    }
   };
 
 const addNode = () => {
