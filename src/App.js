@@ -98,8 +98,22 @@ const saveNodeNote = (id, newNote) => {
   };
   const updatedGraph = updateNote(graph);
   localStorage.setItem('graph', JSON.stringify(updatedGraph));
+  
+  // Helper function to collect notes
+  const collectNotes = (nodes) => {
+    let notesList = [];
+    nodes.forEach(node => {
+      notesList.push(`Node: ${node.id}, Notes: ${node.notes}`);
+      if (node.children) {
+        notesList = notesList.concat(collectNotes(node.children));
+      }
+    });
+    return notesList;
+  };
+
+  const allNotes = collectNotes(updatedGraph);
   console.log("Saving note for node to localStorage:");
-  console.log(updatedGraph);
+  console.log(allNotes.join('\n'));
 };
 
 const fetchStations = async (latitude, longitude) => {
