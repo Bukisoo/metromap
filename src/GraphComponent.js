@@ -27,7 +27,8 @@ const GraphComponent = ({
   usedColors,
   setUsedColors,
   updateHistory,
-  undoAction
+  undoAction,
+  updateGraph
 }) => {
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
@@ -87,8 +88,8 @@ const GraphComponent = ({
   const createForceDirectedGraph = () => {
     const width = 10000; 
     const height = 10000; 
-    const viewWidth = window.innerWidth / (isEditorVisible ? 2 : 1); // Get the actual viewport width
-    const viewHeight = window.innerHeight; // Get the actual viewport height
+    const viewWidth = window.innerWidth / (isEditorVisible ? 2 : 1);
+    const viewHeight = window.innerHeight;
 
     const svg = d3.select(svgRef.current)
       .attr('width', width)
@@ -109,7 +110,6 @@ const GraphComponent = ({
       .attr('class', 'zoom-group')
       .attr('transform', zoomRef.current);
 
-    // Add zoom behavior
     const zoom = d3.zoom()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
@@ -125,7 +125,7 @@ const GraphComponent = ({
     const simulation = d3.forceSimulation(flatNodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(100))
       .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(width / 2, height / 2)) // Center in the middle of the large canvas
+      .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(30))
       .force('x', d3.forceX(width / 2).strength(0.1))
       .force('y', d3.forceY(height / 2).strength(0.1))
@@ -199,23 +199,22 @@ const GraphComponent = ({
         .attr('text-anchor', 'start')
         .attr('dominant-baseline', 'central')
         .attr('transform', 'rotate(-45)')
-        .attr('x', 20)  // Offset from the center of the node
-        .attr('y', -20) // Offset from the center of the node
+        .attr('x', 20)
+        .attr('y', -20)
         .attr('font-weight', 'bold')
         .style('user-select', 'none')
         .style('fill', '#fff')
-        .style('font-size', '15px');  // Adjust font size as needed
+        .style('font-size', '15px');
 
       const bbox = text.node().getBBox();
 
-      // Calculate the diagonal of the bounding box
       const diagonal = Math.sqrt(bbox.width * bbox.width + bbox.height * bbox.height);
 
       g.insert('rect', 'text')
         .attr('x', 15)
         .attr('y', -30)
         .attr('width', diagonal + 5)
-        .attr('height', 20)  // Fixed height for the background
+        .attr('height', 20)
         .attr('transform', 'rotate(-45)')
         .attr('rx', 5)
         .attr('ry', 5)
@@ -352,24 +351,16 @@ const GraphComponent = ({
       if (!event.active) simulation.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-
+    
       const binButton = svg.select('.bin-button');
       const binBounds = binButton.node().getBoundingClientRect();
       const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
-
-      const zoomTransform = zoomRef.current;
-      const adjustedBinBounds = {
-        left: binBounds.left * zoomTransform.k + zoomTransform.x,
-        right: binBounds.right * zoomTransform.k + zoomTransform.x,
-        top: binBounds.top * zoomTransform.k + zoomTransform.y,
-        bottom: binBounds.bottom * zoomTransform.k + zoomTransform.y,
-      };
-
+    
       if (
-        nodeBounds.left < adjustedBinBounds.right &&
-        nodeBounds.right > adjustedBinBounds.left &&
-        nodeBounds.top < adjustedBinBounds.bottom &&
-        nodeBounds.bottom > adjustedBinBounds.top
+        nodeBounds.left < binBounds.right &&
+        nodeBounds.right > binBounds.left &&
+        nodeBounds.top < binBounds.bottom &&
+        nodeBounds.bottom > binBounds.top
       ) {
         confirmAndRemoveNode(d);
       } else {
@@ -381,7 +372,7 @@ const GraphComponent = ({
           }
           return false;
         });
-
+    
         if (targetNode) {
           connectNodes(d, targetNode);
         }
@@ -391,32 +382,32 @@ const GraphComponent = ({
 
   const applyGlowEffect = () => {
     const svg = d3.select(svgRef.current);
-    svg.selectAll('.node-circle').classed('glow', false); // Remove glow from all nodes
+    svg.selectAll('.node-circle').classed('glow', false);
 
     if (selectedNode) {
-      // Apply glow only to the selected node
       svg.selectAll('.node-circle')
         .filter(node => node.id === selectedNode.id)
         .classed('glow', true);
     }
   };
 
-const addNode = () => {
+  const addNode = () => {
     const randomStation = stations[Math.floor(Math.random() * stations.length)] || "New Node";
-    const width = 10000; // Large canvas width
-    const height = 10000; // Large canvas height
+    const width = 10000;
+    const height = 10000;
     const newNode = {
       id: `node-${Date.now()}`,
       name: randomStation,
-      color: '#e0e0e0', // Default to main node color
+      color: '#e0e0e0',
       notes: '',
       children: [],
-      x: width / 2, // Center the node in the large canvas
-      y: height / 2, // Center the node in the large canvas
+      x: width / 2,
+      y: height / 2,
       childrenHidden: false
     };
     setNodes(prevNodes => {
       const updatedNodes = [...prevNodes, newNode];
+      updateGraph(updatedNodes);
       updateHistory(updatedNodes);
       return updatedNodes;
     });
@@ -448,6 +439,7 @@ const addNode = () => {
     };
     setNodes(prevNodes => {
       const updatedNodes = removeNodeAndChildren(prevNodes);
+      updateGraph(updatedNodes);
       updateHistory(updatedNodes);
       return updatedNodes;
     });
@@ -464,7 +456,9 @@ const addNode = () => {
         return node;
       });
     };
-    setNodes(updateNodes(nodes));
+    const updatedNodes = updateNodes(nodes);
+    setNodes(updatedNodes);
+    updateGraph(updatedNodes);
   };
 
   const toggleChildrenVisibility = (node) => {
@@ -478,7 +472,9 @@ const addNode = () => {
         return n;
       });
     };
-    setNodes(toggleHidden(nodes));
+    const updatedNodes = toggleHidden(nodes);
+    setNodes(updatedNodes);
+    updateGraph(updatedNodes);
   };
 
   const getNextColor = (usedColors) => {
@@ -551,6 +547,7 @@ const addNode = () => {
       updatedNodes = addNodeToNewParent(updatedNodes, sourceNode, targetNode);
 
       const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
+      updateGraph(finalNodes);
       updateHistory(finalNodes);
       return finalNodes;
     });

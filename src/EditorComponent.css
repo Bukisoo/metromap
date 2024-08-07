@@ -1,51 +1,54 @@
 .editor-container {
-  display: flex;
-  flex-direction: column;
-  top: 0;
+  position: fixed;
   right: 0;
+  top: 0;
   width: 50%;
   height: 100%;
-  background: #2e2e2e;
+  background: #333;
   color: #fff;
-  overflow-y: auto;
-  display: none;
-  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
 }
 
 .editor-container.visible {
-  display: block;
+  transform: translateX(0);
 }
 
 .editor-content {
-  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 10px;
-  background-color: #2e2e2e;
-  border-bottom: 1px solid #ddd;
+  background: #444;
 }
 
 .editor-title {
   flex: 1;
-  margin-right: 10px;
   padding: 5px;
-  font-size: 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  margin-right: 10px;
+  background: #222;
+  border: 1px solid #555;
+  color: #fff;
 }
-
 .editor-tools {
   display: flex;
   align-items: center;
 }
 
 .editor-tool-button {
-  margin-left: 10px;
   padding: 5px 10px;
-  font-size: 14px;
+  background: #555;
+  border: none;
+  color: #fff;
   cursor: pointer;
 }
 
@@ -58,7 +61,9 @@
 
 .quill-container {
   flex: 1;
-  overflow: auto;
+  background: #fff;
+  color: #000;
+  border-radius: 5px;
 }
 
 .line-numbers {

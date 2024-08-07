@@ -26,8 +26,14 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
 
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
-      console.log("Saving content for node:", nodeId);
+      const prevContent = localStorage.getItem('graph') ? JSON.parse(localStorage.getItem('graph')).find(node => node.id === nodeId)?.notes || '' : '';
+      console.log(`Saving content for node: ${nodeId}`);
+      console.log(`Previous content: ${prevContent}`);
+      console.log(`Updated content: ${content}`);
       updateNodeProperty(nodeId, 'notes', content);
+      console.log(`Content saved for node: ${nodeId}`);
+    } else {
+      console.log(`Skipping save for node: ${nodeId} because it is still loading`);
     }
   }, [updateNodeProperty, isLoading]);
 
@@ -35,6 +41,13 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
     debounce((content, nodeId) => saveContent(content, nodeId), 1000),
     [saveContent]
   );
+
+  const immediateSaveContent = useCallback((content, nodeId) => {
+    if (nodeId) {
+      debouncedSaveContent.cancel();
+      saveContent(content, nodeId);
+    }
+  }, [debouncedSaveContent, saveContent]);
 
   const initializeQuill = () => {
     if (editorRef.current && !quillRef.current) {
@@ -59,7 +72,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       const handleTextChange = () => {
         if (!isLoading && !isInitialLoadRef.current) {
           const content = quillRef.current.root.innerHTML;
-          console.log("Text changed for node:", currentNodeRef.current);
+          console.log(`Text changed for node: ${currentNodeRef.current} with content length: ${content.length}`);
           debouncedSaveContent(content, currentNodeRef.current);
         }
       };
@@ -117,22 +130,25 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
 
   useEffect(() => {
     if (isOpen && selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
-      console.log("Node selected:", selectedNode);
+      console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
 
       // Cancel any pending debounced saves for the previous node
-      debouncedSaveContent.cancel();
+      if (lastLoadedNodeIdRef.current) {
+        const prevContent = quillRef.current.root.innerHTML;
+        immediateSaveContent(prevContent, lastLoadedNodeIdRef.current);
+      }
 
       setTitle(selectedNode.name);
       setSelectedColor(selectedNode.color || '#000000');
       currentNodeRef.current = selectedNode.id;
       lastLoadedNodeIdRef.current = selectedNode.id;
-      
+
       if (quillRef.current) {
-        console.log("Loading content for node:", selectedNode.id);
+        console.log(`Loading content for node: ${selectedNode.id}`);
         loadContentProgressively(selectedNode.notes || '');
       }
     }
-  }, [selectedNode, isOpen, debouncedSaveContent]);
+  }, [selectedNode, isOpen, immediateSaveContent]);
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;

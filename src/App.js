@@ -76,7 +76,30 @@ const loadGraph = () => {
 };
 
 const saveGraph = (graph) => {
+  console.log("Saving the entire graph to localStorage:");
+  console.log(graph);
   localStorage.setItem('graph', JSON.stringify(graph));
+};
+
+const saveNodeNote = (id, newNote) => {
+  const savedGraph = localStorage.getItem('graph');
+  if (!savedGraph) return;
+  
+  const graph = JSON.parse(savedGraph);
+  const updateNote = (nodes) => {
+    return nodes.map(node => {
+      if (node.id === id) {
+        return { ...node, notes: newNote };
+      } else if (node.children) {
+        return { ...node, children: updateNote(node.children) };
+      }
+      return node;
+    });
+  };
+  const updatedGraph = updateNote(graph);
+  localStorage.setItem('graph', JSON.stringify(updatedGraph));
+  console.log("Saving note for node to localStorage:");
+  console.log(updatedGraph);
 };
 
 const fetchStations = async (latitude, longitude) => {
@@ -107,7 +130,6 @@ const App = () => {
         setNodes(initialNodes);
         saveGraph(initialNodes);
       }, () => {
-        // Handle geolocation error (e.g., user denied permission)
         const defaultStations = ['Main Station', 'Child Station 1', 'Child Station 2', 'Child Station 3'];
         setStations(defaultStations);
         const initialNodes = initialGraph(defaultStations);
@@ -115,10 +137,6 @@ const App = () => {
         saveGraph(initialNodes);
       });
     }
-  }, [nodes]);
-
-  useEffect(() => {
-    saveGraph(nodes);
   }, [nodes]);
 
   const updateNodeProperty = (id, property, value) => {
@@ -135,18 +153,27 @@ const App = () => {
     const updatedNodes = updateNodes(nodes);
     setNodes(updatedNodes);
 
-    // Update selectedNode if it's the one being modified
+    if (property === 'notes') {
+      saveNodeNote(id, value);
+    } else {
+      saveGraph(updatedNodes);
+    }
+
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
 
-    // Update editorContent
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
 
     updateHistory(updatedNodes);
+  };
+
+  const updateGraph = (newNodes) => {
+    setNodes(newNodes);
+    saveGraph(newNodes);
   };
 
   const updateHistory = (newNodes) => {
@@ -184,15 +211,14 @@ const App = () => {
           setUsedColors={setUsedColors}
           updateHistory={updateHistory}
           undoAction={undoAction}
+          updateGraph={updateGraph} // pass updateGraph to GraphComponent
         />
       </div>
       <EditorComponent
         selectedNode={selectedNode}
-        editorContent={editorContent}
-        setEditorContent={setEditorContent}
         updateNodeProperty={updateNodeProperty}
         isOpen={isEditorVisible}
-        
+        setIsOpen={setIsEditorVisible}
       />
       <div className="accent-bar"></div>
     </div>
