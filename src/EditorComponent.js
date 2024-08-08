@@ -12,6 +12,7 @@ if (typeof window !== "undefined") {
 }
 
 const CHUNK_SIZE = 100;
+const LOAD_TIMEOUT = 3000; // Set a timeout for content loading (3 seconds)
 
 const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }) => {
   const editorRef = useRef(null);
@@ -24,6 +25,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
   const currentNodeRef = useRef(null);
   const lastLoadedNodeIdRef = useRef(null);
   const contentLoadedRef = useRef(false); // Track if content was loaded
+  const loadAttemptedRef = useRef(false); // Track if load was attempted to prevent double load
+  const contentModifiedRef = useRef(false); // Track if content was modified
+  const loadTimerRef = useRef(null); // Timer reference for content loading
 
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
@@ -70,65 +74,63 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
         }
       });
 
-      const handleTextChange = () => {
-        if (!isLoading && !isInitialLoadRef.current) {
-          const content = quillRef.current.root.innerHTML;
-          console.log(`Text changed for node: ${currentNodeRef.current} with content length: ${content.length}`);
-          debouncedSaveContent(content, currentNodeRef.current);
-        }
-      };
-
-      quillRef.current.on('text-change', handleTextChange);
       console.log("Event listener attached");
+    }
+  };
 
-      // Check if the content is empty after initialization and reload if necessary
-      if (quillRef.current.root.innerHTML === '<p><br></p>' || quillRef.current.root.innerHTML.trim() === '') {
-        console.log(`Editor content is empty, reloading content for node: ${currentNodeRef.current}`);
-        const graphData = localStorage.getItem('graph') ? JSON.parse(localStorage.getItem('graph')) : [];
-        const latestNodeData = (function findNodeById(nodes, id) {
-          for (const node of nodes) {
-            if (node.id === id) return node;
-            if (node.children) {
-              const result = findNodeById(node.children, id);
-              if (result) return result;
-            }
-          }
-          return null;
-        })(graphData, currentNodeRef.current);
-
-        if (latestNodeData) {
-          loadContentProgressively(latestNodeData.notes || '');
+  const startLoadTimer = () => {
+    clearLoadTimer();
+    loadTimerRef.current = setTimeout(() => {
+      if (!contentLoadedRef.current) {
+        console.log("Content load timeout, retrying...");
+        if (selectedNode) {
+          loadContentProgressively(selectedNode.notes || '');
         }
       }
+    }, LOAD_TIMEOUT);
+  };
 
-      return () => {
-        console.log("Cleaning up Quill");
-        if (quillRef.current) {
-          quillRef.current.off('text-change', handleTextChange);
-          quillRef.current = null;
-        }
-      };
+  const clearLoadTimer = () => {
+    if (loadTimerRef.current) {
+      clearTimeout(loadTimerRef.current);
+      loadTimerRef.current = null;
     }
+  };
+
+  const handleTextChange = () => {
+    if (!isLoading && !isInitialLoadRef.current) {
+      contentModifiedRef.current = true; // Mark content as modified
+      const content = quillRef.current.root.innerHTML;
+      console.log(`Text changed for node: ${currentNodeRef.current} with content length: ${content.length}`);
+      debouncedSaveContent(content, currentNodeRef.current);
+    }
+  };
+
+  const cleanupQuill = () => {
+    if (quillRef.current) {
+      console.log("Cleaning up Quill on close");
+      const content = quillRef.current.root.innerHTML;
+      // Only save if the content was modified and is not just an empty placeholder
+      if (contentModifiedRef.current && content !== '<p><br></p>' && content.trim() !== '') {
+        immediateSaveContent(content, currentNodeRef.current);
+      }
+      quillRef.current.off('text-change');
+      quillRef.current = null;
+    }
+    clearLoadTimer();
   };
 
   useEffect(() => {
     if (isOpen) {
       initializeQuill();
-    }
-
-    return () => {
-      if (!isOpen && quillRef.current) {
-        console.log("Cleaning up Quill on close");
-        const content = quillRef.current.root.innerHTML;
-        // Only save if the content is not just an empty placeholder
-        if (!isInitialLoadRef.current && content !== '<p><br></p>' && content.trim() !== '') {
-          immediateSaveContent(content, currentNodeRef.current);
-        }
-        quillRef.current.off('text-change');
-        quillRef.current = null;
+      if (selectedNode && !contentLoadedRef.current && !loadAttemptedRef.current) {
+        console.log(`Loading content for node: ${selectedNode.id}`);
+        loadContentProgressively(selectedNode.notes || '');
       }
-    };
-  }, [isOpen, immediateSaveContent]);
+    } else {
+      cleanupQuill();
+    }
+  }, [isOpen, selectedNode, immediateSaveContent]);
 
   const loadContentProgressively = (content) => {
     let index = 0;
@@ -143,6 +145,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
         setIsLoading(false);
         isInitialLoadRef.current = false;
         contentLoadedRef.current = true; // Mark content as loaded
+        loadAttemptedRef.current = false; // Reset the load attempted flag
+        clearLoadTimer(); // Clear the load timer
+        quillRef.current.on('text-change', handleTextChange); // Attach event listener after loading
         console.log("Content loaded");
       }
     };
@@ -150,6 +155,8 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
     setIsLoading(true);
     isInitialLoadRef.current = true;
     contentLoadedRef.current = false; // Reset the loaded flag
+    loadAttemptedRef.current = true; // Set the load attempted flag
+    contentModifiedRef.current = false; // Reset the modified flag
     if (quillRef.current) {
       quillRef.current.setText(''); // Clear existing content
       requestAnimationFrame(loadChunk);
@@ -183,8 +190,8 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       // Cancel any pending debounced saves for the previous node
       if (lastLoadedNodeIdRef.current) {
         const prevContent = quillRef.current.root.innerHTML;
-        // Only save if the content is not just an empty placeholder
-        if (prevContent !== '<p><br></p>' && prevContent.trim() !== '') {
+        // Only save if the content was modified and is not just an empty placeholder
+        if (contentModifiedRef.current && prevContent !== '<p><br></p>' && prevContent.trim() !== '') {
           immediateSaveContent(prevContent, lastLoadedNodeIdRef.current);
         }
       }
@@ -194,35 +201,12 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       currentNodeRef.current = selectedNode.id;
       lastLoadedNodeIdRef.current = selectedNode.id;
 
-      if (quillRef.current) {
+      if (quillRef.current && !loadAttemptedRef.current) { // Check the flag before loading
         console.log(`Loading content for node: ${selectedNode.id}`);
         loadContentProgressively(selectedNode.notes || '');
       }
     }
   }, [selectedNode, isOpen, immediateSaveContent]);
-
-  useEffect(() => {
-    // Check if content is not loaded and try reloading
-    if (isOpen && quillRef.current && !contentLoadedRef.current) {
-      console.log(`Content not loaded correctly, reloading content for node: ${currentNodeRef.current}`);
-      const graphData = localStorage.getItem('graph') ? JSON.parse(localStorage.getItem('graph')) : [];
-      const latestNodeData = (function findNodeById(nodes, id) {
-        for (const node of nodes) {
-          if (node.id === id) return node;
-          if (node.children) {
-            const result = findNodeById(node.children, id);
-            if (result) return result;
-          }
-        }
-        return null;
-      })(graphData, currentNodeRef.current);
-
-      if (latestNodeData) {
-        loadContentProgressively(latestNodeData.notes || '');
-        contentLoadedRef.current = true; // Ensure it's marked as loaded after retry
-      }
-    }
-  }, [isOpen]);
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
