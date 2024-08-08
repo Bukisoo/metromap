@@ -64,6 +64,7 @@
   background: #fff;
   color: #000;
   border-radius: 5px;
+  overflow: auto; /* Add this line for scroll bar */
 }
 
 .line-numbers {

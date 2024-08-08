@@ -11,8 +11,9 @@ if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
 
-const CHUNK_SIZE = 100;
+const CHUNK_SIZE = 1000;
 const LOAD_TIMEOUT = 3000; // Set a timeout for content loading (3 seconds)
+const RETRY_INTERVAL = 1000; // Retry interval for loading content
 
 const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }) => {
   const editorRef = useRef(null);
@@ -28,6 +29,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
   const loadAttemptedRef = useRef(false); // Track if load was attempted to prevent double load
   const contentModifiedRef = useRef(false); // Track if content was modified
   const loadTimerRef = useRef(null); // Timer reference for content loading
+  const retryTimerRef = useRef(null); // Timer reference for retrying content load
 
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
@@ -97,6 +99,23 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
     }
   };
 
+  const startRetryTimer = () => {
+    clearRetryTimer();
+    retryTimerRef.current = setTimeout(() => {
+      if (!contentLoadedRef.current && selectedNode) {
+        console.log("Retrying content load...");
+        loadContentProgressively(selectedNode.notes || '');
+      }
+    }, RETRY_INTERVAL);
+  };
+
+  const clearRetryTimer = () => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  };
+
   const handleTextChange = () => {
     if (!isLoading && !isInitialLoadRef.current) {
       contentModifiedRef.current = true; // Mark content as modified
@@ -118,6 +137,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       quillRef.current = null;
     }
     clearLoadTimer();
+    clearRetryTimer();
   };
 
   useEffect(() => {
@@ -134,12 +154,35 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
 
   const loadContentProgressively = (content) => {
     let index = 0;
-
+    const contentLength = content.length;
+  
     const loadChunk = () => {
-      if (index < content.length && quillRef.current) {
-        const chunk = content.slice(index, index + CHUNK_SIZE);
+      if (index < contentLength && quillRef.current) {
+        // Find the next safe chunk end that does not split HTML tags or code blocks
+        let chunkEnd = index + CHUNK_SIZE;
+        if (chunkEnd < contentLength) {
+          // Ensure the chunk does not end in the middle of a tag or code block
+          while (chunkEnd < contentLength && content[chunkEnd] !== '>') {
+            chunkEnd++;
+          }
+          if (chunkEnd < contentLength) {
+            chunkEnd++; // Include the '>' in the chunk
+          }
+  
+          // Check for the start of a code block and include the entire block in one chunk
+          const codeBlockStart = content.indexOf('<pre', index);
+          if (codeBlockStart !== -1 && codeBlockStart < chunkEnd) {
+            const codeBlockEnd = content.indexOf('</pre>', codeBlockStart) + 6; // Include '</pre>'
+            if (codeBlockEnd > chunkEnd) {
+              chunkEnd = codeBlockEnd;
+            }
+          }
+        }
+  
+        const chunk = content.slice(index, chunkEnd);
         quillRef.current.clipboard.dangerouslyPasteHTML(index, chunk, 'silent');
-        index += CHUNK_SIZE;
+        index = chunkEnd;
+  
         requestAnimationFrame(loadChunk);
       } else {
         setIsLoading(false);
@@ -147,11 +190,12 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
         contentLoadedRef.current = true; // Mark content as loaded
         loadAttemptedRef.current = false; // Reset the load attempted flag
         clearLoadTimer(); // Clear the load timer
+        clearRetryTimer(); // Clear the retry timer
         quillRef.current.on('text-change', handleTextChange); // Attach event listener after loading
         console.log("Content loaded");
       }
     };
-
+  
     setIsLoading(true);
     isInitialLoadRef.current = true;
     contentLoadedRef.current = false; // Reset the loaded flag
@@ -162,50 +206,55 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       requestAnimationFrame(loadChunk);
     }
   };
+  
 
   useEffect(() => {
-    if (isOpen && selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
-      console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
+    const loadDataAndLoadContent = async () => {
+      if (isOpen && selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
+        console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
 
-      // Fetch the latest data from local storage
-      const graphData = localStorage.getItem('graph') ? JSON.parse(localStorage.getItem('graph')) : [];
-      const latestNodeData = (function findNodeById(nodes, id) {
-        for (const node of nodes) {
-          if (node.id === id) return node;
-          if (node.children) {
-            const result = findNodeById(node.children, id);
-            if (result) return result;
+        // Fetch the latest data from local storage
+        const graphData = localStorage.getItem('graph') ? JSON.parse(localStorage.getItem('graph')) : [];
+        const latestNodeData = (function findNodeById(nodes, id) {
+          for (const node of nodes) {
+            if (node.id === id) return node;
+            if (node.children) {
+              const result = findNodeById(node.children, id);
+              if (result) return result;
+            }
+          }
+          return null;
+        })(graphData, selectedNode.id);
+
+        if (latestNodeData) {
+          // Update the selectedNode with the latest data
+          selectedNode.notes = latestNodeData.notes || selectedNode.notes;
+          selectedNode.name = latestNodeData.name || selectedNode.name;
+          selectedNode.color = latestNodeData.color || selectedNode.color;
+        }
+
+        // Cancel any pending debounced saves for the previous node
+        if (lastLoadedNodeIdRef.current) {
+          const prevContent = quillRef.current.root.innerHTML;
+          // Only save if the content was modified and is not just an empty placeholder
+          if (contentModifiedRef.current && prevContent !== '<p><br></p>' && prevContent.trim() !== '') {
+            immediateSaveContent(prevContent, lastLoadedNodeIdRef.current);
           }
         }
-        return null;
-      })(graphData, selectedNode.id);
 
-      if (latestNodeData) {
-        // Update the selectedNode with the latest data
-        selectedNode.notes = latestNodeData.notes || selectedNode.notes;
-        selectedNode.name = latestNodeData.name || selectedNode.name;
-        selectedNode.color = latestNodeData.color || selectedNode.color;
-      }
+        setTitle(selectedNode.name);
+        setSelectedColor(selectedNode.color || '#000000');
+        currentNodeRef.current = selectedNode.id;
+        lastLoadedNodeIdRef.current = selectedNode.id;
 
-      // Cancel any pending debounced saves for the previous node
-      if (lastLoadedNodeIdRef.current) {
-        const prevContent = quillRef.current.root.innerHTML;
-        // Only save if the content was modified and is not just an empty placeholder
-        if (contentModifiedRef.current && prevContent !== '<p><br></p>' && prevContent.trim() !== '') {
-          immediateSaveContent(prevContent, lastLoadedNodeIdRef.current);
+        if (quillRef.current && !loadAttemptedRef.current) { // Check the flag before loading
+          console.log(`Loading content for node: ${selectedNode.id}`);
+          loadContentProgressively(selectedNode.notes || '');
         }
       }
+    };
 
-      setTitle(selectedNode.name);
-      setSelectedColor(selectedNode.color || '#000000');
-      currentNodeRef.current = selectedNode.id;
-      lastLoadedNodeIdRef.current = selectedNode.id;
-
-      if (quillRef.current && !loadAttemptedRef.current) { // Check the flag before loading
-        console.log(`Loading content for node: ${selectedNode.id}`);
-        loadContentProgressively(selectedNode.notes || '');
-      }
-    }
+    loadDataAndLoadContent();
   }, [selectedNode, isOpen, immediateSaveContent]);
 
   const handleTitleChange = (e) => {
