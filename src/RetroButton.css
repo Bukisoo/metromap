@@ -1,3 +1,17 @@
+:root {
+  /* Background colors */
+  --graph-background: #1e1e1e;
+  --editor-background: #333333;
+
+  /* Accent color */
+  --accent-color: #E40F20;
+
+  /* Save indicator colors */
+  --save-indicator-loading: #ff0000;
+  --save-indicator-saved: #00ff00;
+  --save-indicator-saving: #ffa500;
+}
+
 .retro-button {
     cursor: pointer;
     transition: transform 0.3s ease;

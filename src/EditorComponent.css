@@ -1,10 +1,12 @@
+/* Editor Container Styles */
+
 .editor-container {
   position: fixed;
   right: 0;
   top: 0;
   width: 50%;
   height: 100%;
-  background: #333;
+  background: var(--editor-background);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -21,6 +23,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%; /* Ensure editor content takes full height */
 }
 
 .editor-header {
@@ -39,24 +42,55 @@
   border: 1px solid #555;
   color: #fff;
 }
+
 .editor-tools {
   display: flex;
   align-items: center;
 }
 
-.editor-tool-button {
-  padding: 5px 10px;
-  background: #555;
-  border: none;
-  color: #fff;
+/* Color Pastilles */
+.color-pastille {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-right: 5px;
   cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
+.color-pastille:hover {
+  transform: scale(1.2);
+}
+
+.color-pastille.custom-color {
+  background: #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Color Picker Popup */
+.color-picker-popup {
+  position: absolute;
+  top: 50px; /* Adjust as needed */
+  right: 10px;
+  z-index: 2000;
+  background: #fff;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+/* Editor Body and Quill Container */
 .editor-body {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  overflow: hidden;
+  background: #fff; /* Ensure the editor background is white */
+  overflow: hidden; /* Hide overflow for the container */
 }
 
 .quill-container {
@@ -64,48 +98,14 @@
   background: #fff;
   color: #000;
   border-radius: 5px;
-  overflow: auto; /* Add this line for scroll bar */
-}
-
-.line-numbers {
-  position: absolute;
-  left: 0;
-  top: 0;
-  padding: 10px 5px;
-  text-align: right;
-  user-select: none;
-  background: #1e1e1e;
-  color: #888;
-  width: 30px;
-  overflow: hidden;
-}
-
-.line-numbers div {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 5px;
-}
-
-.quill-editor {
-  width: calc(100% - 40px);
-  margin-left: 40px;
-  background: #fff;
-  color: #000;
+  overflow: auto; /* Enable scroll bar on overflow */
   padding: 10px;
-  font-size: var(--editor-font-size, 14px);
-  border: none;
-  outline: none;
-}
-
-.ql-toolbar {
-  background: #1e1e1e;
-  border: none;
+  height: 100%; /* Ensure it takes full height */
 }
 
 .ql-container {
   font-size: 14px;
-  height: calc(100% - 42px);
+  height: calc(100% - 42px); /* Adjust to ensure it fits within the editor body */
 }
 
 .loading-indicator {
@@ -124,28 +124,28 @@
   bottom: 0;
   left: 0;
   height: 5px;
-  background: #00ff00; /* Green color for loading bar */
+  background: var(--save-indicator-saved);
   transition: width 0.3s ease;
 }
 
-/* Save indicator styles */
+/* Save Indicator */
 .save-indicator {
-  margin-left: 10px; /* Adjust as needed */
+  margin-left: 10px;
   padding: 5px 10px;
-  background: #444;
+  background: var(--save-indicator-loading);
   color: #fff;
   border-radius: 3px;
   font-size: 12px;
 }
 
 .save-indicator.saving {
-  background: #ffa500; /* Orange color for saving */
+  background: var(--save-indicator-saving);
 }
 
 .save-indicator.saved {
-  background: #00ff00; /* Green color for saved */
+  background: var(--save-indicator-saved);
 }
 
 .save-indicator.error {
-  background: #ff0000; /* Red color for error */
+  background: #ff0000;
 }

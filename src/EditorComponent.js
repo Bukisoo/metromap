@@ -12,6 +12,8 @@ if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
 
+const colorOptions = ['#455EED', '#F7AFE7', '#FFCF25', '#51CAB4', '#FD7543', '#FD4370'];
+
 const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, onNodeChange }) => {
   const editorRef = useRef(null);
   const quillRef = useRef(null);
@@ -222,6 +224,17 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
     }
   }, [selectedNode, updateNodeProperty]);
 
+  const handleColorPastilleClick = (color) => {
+    setSelectedColor(color);
+    if (selectedNode) {
+      updateNodeProperty(selectedNode.id, 'color', color);
+    }
+  };
+
+  const toggleColorPicker = () => {
+    setShowColorPicker(!showColorPicker);
+  };
+
   if (!selectedNode) return null;
 
   return (
@@ -236,21 +249,34 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
             className="editor-title"
           />
           <div className="editor-tools">
-            <button onClick={() => setShowColorPicker(!showColorPicker)} className="editor-tool-button">
-              Color
-            </button>
+            {colorOptions.map((color, index) => (
+              <div
+                key={index}
+                className="color-pastille"
+                style={{ backgroundColor: color }}
+                onClick={() => handleColorPastilleClick(color)}
+              />
+            ))}
+            <div
+              className="color-pastille custom-color"
+              onClick={toggleColorPicker}
+            >
+              +
+            </div>
+            {showColorPicker && (
+              <div className="color-picker-popup">
+                <SketchPicker
+                  color={selectedColor}
+                  onChangeComplete={handleColorChange}
+                />
+              </div>
+            )}
             <div className={`save-indicator ${saveStatus}`}>
               {saveStatus === 'loading' && 'Loading...'}
               {saveStatus === 'saving' && 'Saving...'}
               {saveStatus === 'saved' && 'Saved'}
               {saveStatus === 'error' && 'Error'}
             </div>
-            {showColorPicker && (
-              <SketchPicker
-                color={selectedColor}
-                onChangeComplete={handleColorChange}
-              />
-            )}
           </div>
         </div>
         <div className="editor-body">
