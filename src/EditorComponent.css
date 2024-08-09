@@ -117,3 +117,35 @@
   border: 1px solid #ddd;
   border-radius: 4px;
 }
+
+/* Loading bar styles */
+.loading-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 5px;
+  background: #00ff00; /* Green color for loading bar */
+  transition: width 0.3s ease;
+}
+
+/* Save indicator styles */
+.save-indicator {
+  margin-left: 10px; /* Adjust as needed */
+  padding: 5px 10px;
+  background: #444;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.save-indicator.saving {
+  background: #ffa500; /* Orange color for saving */
+}
+
+.save-indicator.saved {
+  background: #00ff00; /* Green color for saved */
+}
+
+.save-indicator.error {
+  background: #ff0000; /* Red color for error */
+}
