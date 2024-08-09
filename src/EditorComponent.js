@@ -12,7 +12,7 @@ if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
 
-const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }) => {
+const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, onNodeChange }) => {
   const editorRef = useRef(null);
   const quillRef = useRef(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -166,6 +166,14 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
     }
   }, [immediateSaveContent, handleTextChange]);
 
+  const confirmLeave = useCallback((e) => {
+    if (saveStatus === 'saving') {
+      const confirmationMessage = 'You have unsaved changes. Are you sure you want to leave?';
+      e.returnValue = confirmationMessage; // Standard for most browsers
+      return confirmationMessage; // For some browsers
+    }
+  }, [saveStatus]);
+
   useEffect(() => {
     if (isOpen) {
       console.time('initializeQuill');
@@ -181,13 +189,23 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
     } else {
       cleanupQuill();
     }
-  }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill]);
 
-  useEffect(() => {
-    if (isOpen && !isLoading) {
-      lazyHighlightCodeBlocks();
+    window.addEventListener('beforeunload', confirmLeave);
+
+    return () => {
+      window.removeEventListener('beforeunload', confirmLeave);
+    };
+  }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill, confirmLeave]);
+
+  const handleNodeChange = () => {
+    if (saveStatus === 'saving') {
+      const confirmChange = window.confirm('You have unsaved changes. Are you sure you want to switch nodes?');
+      if (!confirmChange) {
+        return;
+      }
     }
-  }, [isOpen, isLoading, lazyHighlightCodeBlocks]);
+    onNodeChange(); // Trigger the node change
+  };
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
