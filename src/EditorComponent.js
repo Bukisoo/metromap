@@ -5,6 +5,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import { SketchPicker } from 'react-color';
 import debounce from 'lodash/debounce';
+import DOMPurify from 'dompurify';
 import './EditorComponent.css';
 
 if (typeof window !== "undefined") {
@@ -88,8 +89,11 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       isInitialLoadRef.current = true;
       setSaveStatus('loading');
   
+      // Sanitize content using DOMPurify before loading it into the editor
+      const sanitizedContent = DOMPurify.sanitize(content);
+  
       console.time('directInsertHTML');
-      quillRef.current.root.innerHTML = content; // Directly set the HTML content
+      quillRef.current.root.innerHTML = sanitizedContent; // Directly set the sanitized HTML content
       console.timeEnd('directInsertHTML');
   
       setLoadingProgress(100);
