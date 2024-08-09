@@ -83,36 +83,70 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
 
   const loadContent = useCallback((content) => {
     if (quillRef.current) {
+      console.time('loadContent');
       setIsLoading(true);
       isInitialLoadRef.current = true;
       setSaveStatus('loading');
-      quillRef.current.setText('');
-      quillRef.current.clipboard.dangerouslyPasteHTML(0, content);
-
+  
+      console.time('directInsertHTML');
+      quillRef.current.root.innerHTML = content; // Directly set the HTML content
+      console.timeEnd('directInsertHTML');
+  
       setLoadingProgress(100);
       setTimeout(() => {
         setLoadingProgress(0);
         setIsLoading(false);
         setSaveStatus('saved');
       }, 2000);
-
+  
       console.log("Content loaded");
-
+  
       requestAnimationFrame(() => {
         formatContentInQuill();
         isInitialLoadRef.current = false;
       });
+  
+      console.timeEnd('loadContent');
     }
   }, []);
 
   const formatContentInQuill = useCallback(() => {
     if (quillRef.current) {
+      console.time('formatContentInQuill');
       const codeBlocks = quillRef.current.root.querySelectorAll('pre');
-      codeBlocks.forEach((block) => {
-        block.innerHTML = hljs.highlightAuto(block.innerText).value;
+      console.log(`Found ${codeBlocks.length} code blocks`);
+  
+      codeBlocks.forEach((block, index) => {
+        requestAnimationFrame(() => {
+          console.time(`highlightBlock${index}`);
+          block.innerHTML = hljs.highlightAuto(block.innerText).value;
+          console.timeEnd(`highlightBlock${index}`);
+        });
       });
-
+  
       console.log("Formatting and syntax highlighting applied");
+      console.timeEnd('formatContentInQuill');
+    }
+  }, []);
+
+  const lazyHighlightCodeBlocks = useCallback(() => {
+    if (quillRef.current) {
+      const codeBlocks = quillRef.current.root.querySelectorAll('pre:not(.highlighted)');
+      if (codeBlocks.length > 0) {
+        requestAnimationFrame(() => {
+          codeBlocks.forEach((block, index) => {
+            if (index < 5) { // Process 5 blocks per frame
+              console.time(`lazyHighlightBlock${index}`);
+              block.innerHTML = hljs.highlightAuto(block.innerText).value;
+              block.classList.add('highlighted');
+              console.timeEnd(`lazyHighlightBlock${index}`);
+            }
+          });
+          if (codeBlocks.length > 5) {
+            lazyHighlightCodeBlocks(); // Continue with remaining blocks
+          }
+        });
+      }
     }
   }, []);
 
@@ -130,7 +164,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
 
   useEffect(() => {
     if (isOpen) {
+      console.time('initializeQuill');
       initializeQuill();
+      console.timeEnd('initializeQuill');
 
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
         console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
@@ -142,6 +178,12 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen }
       cleanupQuill();
     }
   }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill]);
+
+  useEffect(() => {
+    if (isOpen && !isLoading) {
+      lazyHighlightCodeBlocks();
+    }
+  }, [isOpen, isLoading, lazyHighlightCodeBlocks]);
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
