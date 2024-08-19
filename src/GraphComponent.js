@@ -26,9 +26,9 @@ const GraphComponent = ({
   setStations,
   usedColors,
   setUsedColors,
-  updateHistory,
   undoAction,
-  updateGraph
+  updateGraph,  // Use updateGraph here
+  handleSignificantChange
 }) => {
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
@@ -394,7 +394,6 @@ const GraphComponent = ({
   };
 
   const addNode = () => {
-    // Store the current zoom state before making changes
     const currentZoom = zoomRef.current;
 
     const randomStation = stations[Math.floor(Math.random() * stations.length)] || "New Node";
@@ -411,23 +410,20 @@ const GraphComponent = ({
       childrenHidden: false
     };
 
-    setNodes(prevNodes => {
-      const updatedNodes = [...prevNodes, newNode];
-      updateGraph(updatedNodes);
-      updateHistory(updatedNodes);
-      return updatedNodes;
-    });
+    const updatedNodes = [...nodes, newNode];
+    setNodes(updatedNodes);
+    updateGraph(updatedNodes, true);  // Mark as significant change
 
     if (simulationRef.current) {
       const simulation = simulationRef.current;
-      simulation.nodes(flattenNodes([...nodes, newNode]));
+      simulation.nodes(flattenNodes(updatedNodes));
       simulation.alpha(1).restart();
     }
 
-    // Reapply the previous zoom state
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
+  
 
   const confirmAndRemoveNode = (nodeToRemove) => {
     if (window.confirm(`Are you sure you want to delete node ${nodeToRemove.name}?`)) {
@@ -447,12 +443,10 @@ const GraphComponent = ({
         return true;
       });
     };
-    setNodes(prevNodes => {
-      const updatedNodes = removeNodeAndChildren(prevNodes);
-      updateGraph(updatedNodes);
-      updateHistory(updatedNodes);
-      return updatedNodes;
-    });
+
+    const updatedNodes = removeNodeAndChildren(nodes);
+    setNodes(updatedNodes);
+    updateGraph(updatedNodes, true);  // Mark as significant change
   };
 
   const updateNodeProperty = (id, property, value) => {
@@ -513,7 +507,6 @@ const GraphComponent = ({
     return node;
   };
 
-  // Modify the connectNodes function similarly to preserve zoom state:
   const connectNodes = (sourceNode, targetNode) => {
     const currentZoom = zoomRef.current;  // Store zoom before updating
 
@@ -554,18 +547,13 @@ const GraphComponent = ({
       });
     };
 
-    setNodes(prevNodes => {
-      let updatedNodes = removeNodeFromParent(prevNodes, sourceNode);
+    let updatedNodes = removeNodeFromParent(nodes, sourceNode);
+    updatedNodes = addNodeToNewParent(updatedNodes, sourceNode, targetNode);
 
-      updatedNodes = addNodeToNewParent(updatedNodes, sourceNode, targetNode);
+    const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
+    setNodes(finalNodes);
+    updateGraph(finalNodes, true);  // Mark as significant change
 
-      const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
-      updateGraph(finalNodes);
-      updateHistory(finalNodes);
-      return finalNodes;
-    });
-
-    // Reapply the zoom state after updating nodes
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };

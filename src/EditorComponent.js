@@ -179,19 +179,24 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       console.time('initializeQuill');
       initializeQuill();
       console.timeEnd('initializeQuill');
-
+  
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
         console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
         lastLoadedNodeIdRef.current = selectedNode.id;
         setTitle(selectedNode.name || '');
         loadContent(selectedNode.notes || '');
+      } else if (selectedNode && selectedNode.id === lastLoadedNodeIdRef.current) {
+        // Reload the content for the same node if the editor is reopened
+        loadContent(selectedNode.notes || '');
       }
     } else {
       cleanupQuill();
+      // Reset the isInitialLoadRef flag when the editor is closed
+      isInitialLoadRef.current = true;
     }
-
+  
     window.addEventListener('beforeunload', confirmLeave);
-
+  
     return () => {
       window.removeEventListener('beforeunload', confirmLeave);
     };

@@ -76,8 +76,6 @@ const loadGraph = () => {
 };
 
 const saveGraph = (graph) => {
-  console.log("Saving the entire graph to localStorage:");
-  console.log(graph);
   localStorage.setItem('graph', JSON.stringify(graph));
 };
 
@@ -143,13 +141,22 @@ const App = () => {
         const initialNodes = initialGraph(fetchedStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
+        // Record the initial state only once
+        setHistory([JSON.parse(JSON.stringify(initialNodes))]);
       }, () => {
         const defaultStations = ['Main Station', 'Child Station 1', 'Child Station 2', 'Child Station 3'];
         setStations(defaultStations);
         const initialNodes = initialGraph(defaultStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
+        // Record the initial state only once
+        setHistory([JSON.parse(JSON.stringify(initialNodes))]);
       });
+    } else {
+      // Ensure the initial state is added to the history stack
+      if (history.length === 0) {
+        setHistory([JSON.parse(JSON.stringify(nodes))]);
+      }
     }
   }, [nodes]);
 
@@ -185,24 +192,43 @@ const App = () => {
     updateHistory(updatedNodes);
   };
 
-  const updateGraph = (newNodes) => {
+  const updateGraph = (newNodes, significant = false) => {
     setNodes(newNodes);
     saveGraph(newNodes);
+    if (significant) {
+      setHistory(prevHistory => {
+        const newHistory = [...prevHistory, JSON.parse(JSON.stringify(newNodes))];
+        if (newHistory.length > 10) newHistory.shift(); // Limit to 10 history items
+        return newHistory;
+      });
+    }
   };
 
-  const updateHistory = (newNodes) => {
-    setHistory(prevHistory => {
-      const newHistory = [...prevHistory, JSON.parse(JSON.stringify(newNodes))];
-      if (newHistory.length > 10) newHistory.shift();
-      return newHistory;
-    });
+  const updateHistory = (newNodes, significant = false) => {
+    if (significant) {
+      setHistory(prevHistory => {
+        const newHistory = [...prevHistory, JSON.parse(JSON.stringify(newNodes))];
+        if (newHistory.length > 10) newHistory.shift(); // Keep only the last 10 states
+        return newHistory;
+      });
+    }
   };
+
+  const handleSignificantChange = (newNodes) => {
+    // Ensure that the first change saves the initial state to history
+    if (history.length === 1) {
+      setHistory(prevHistory => [...prevHistory, JSON.parse(JSON.stringify(nodes))]);
+    }
+    updateGraph(newNodes, true); // Mark this as a significant change
+  };
+  
 
   const undoAction = () => {
     setHistory(prevHistory => {
-      if (prevHistory.length === 0) return prevHistory;
-      const lastState = prevHistory[prevHistory.length - 1];
+      if (prevHistory.length <= 1) return prevHistory;
+      const lastState = prevHistory[prevHistory.length - 2];
       setNodes(lastState);
+      saveGraph(lastState);
       return prevHistory.slice(0, -1);
     });
   };
@@ -223,14 +249,16 @@ const App = () => {
           setStations={setStations}
           usedColors={usedColors}
           setUsedColors={setUsedColors}
-          updateHistory={updateHistory}
+          updateGraph={updateGraph}
           undoAction={undoAction}
-          updateGraph={updateGraph} // pass updateGraph to GraphComponent
         />
       </div>
       <EditorComponent
         selectedNode={selectedNode}
-        updateNodeProperty={updateNodeProperty}
+        updateNodeProperty={(id, property, value) => {
+          const updatedNodes = nodes.map(node => node.id === id ? { ...node, [property]: value } : node);
+          updateGraph(updatedNodes, property !== 'notes'); // Significant change if not just notes
+        }}
         isOpen={isEditorVisible}
         setIsOpen={setIsEditorVisible}
       />
