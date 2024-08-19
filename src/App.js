@@ -214,6 +214,37 @@ const App = () => {
     }
   };
 
+  const handleDetachNode = (nodeId) => {
+    const detachNode = (nodes) => {
+      let nodeToDetach = null;
+      const updatedNodes = nodes.map(node => {
+        if (node.children) {
+          const filteredChildren = node.children.filter(child => {
+            if (child.id === nodeId) {
+              nodeToDetach = child;
+              return false; // Remove the child from its parent
+            }
+            return true;
+          });
+  
+          return { ...node, children: filteredChildren };
+        }
+        return node;
+      });
+  
+      if (nodeToDetach) {
+        // Set default color to indicate top-level node
+        nodeToDetach.color = '#e0e0e0';
+        updatedNodes.push(nodeToDetach); // Add it to the top-level nodes
+      }
+      return updatedNodes;
+    };
+  
+    const updatedNodes = detachNode(nodes);
+    setNodes(updatedNodes);
+    updateGraph(updatedNodes, true); // Mark as a significant change
+  };
+
   const handleSignificantChange = (newNodes) => {
     // Ensure that the first change saves the initial state to history
     if (history.length === 1) {
@@ -255,6 +286,7 @@ const App = () => {
       </div>
       <EditorComponent
         selectedNode={selectedNode}
+        handleDetachNode={handleDetachNode} // Pass the handleDetachNode function
         updateNodeProperty={(id, property, value) => {
           const updatedNodes = nodes.map(node => node.id === id ? { ...node, [property]: value } : node);
           updateGraph(updatedNodes, property !== 'notes'); // Significant change if not just notes

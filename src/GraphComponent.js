@@ -40,6 +40,18 @@ const GraphComponent = ({
     }
   }, [nodes, isEditorVisible]);
 
+  const centerGraph = () => {
+    const svg = d3.select(svgRef.current);
+    const width = window.innerWidth / (isEditorVisible ? 2 : 1);
+    const height = window.innerHeight;
+    const zoom = d3.zoom().scaleExtent([0.1, 4]);
+    const transform = d3.zoomIdentity.translate(width / 2, height / 2).scale(1);
+    
+    svg.transition()
+       .duration(750)
+       .call(zoom.transform, transform);
+  };
+
   useEffect(() => {
     if (selectedNode) {
       applyGlowEffect();

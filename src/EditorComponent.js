@@ -14,7 +14,7 @@ if (typeof window !== "undefined") {
 
 const colorOptions = ['#455EED', '#F7AFE7', '#FFCF25', '#51CAB4', '#FD7543', '#FD4370'];
 
-const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, onNodeChange }) => {
+const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, onNodeChange, handleDetachNode }) => {
   const editorRef = useRef(null);
   const quillRef = useRef(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -67,7 +67,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
         }
       });
       console.log("Quill editor initialized");
-      
+
       quillRef.current.on('text-change', handleTextChange);
     }
   }, []);
@@ -88,28 +88,28 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       setIsLoading(true);
       isInitialLoadRef.current = true;
       setSaveStatus('loading');
-  
+
       // Sanitize content using DOMPurify before loading it into the editor
       const sanitizedContent = DOMPurify.sanitize(content);
-  
+
       console.time('directInsertHTML');
       quillRef.current.root.innerHTML = sanitizedContent; // Directly set the sanitized HTML content
       console.timeEnd('directInsertHTML');
-  
+
       setLoadingProgress(100);
       setTimeout(() => {
         setLoadingProgress(0);
         setIsLoading(false);
         setSaveStatus('saved');
       }, 2000);
-  
+
       console.log("Content loaded");
-  
+
       requestAnimationFrame(() => {
         formatContentInQuill();
         isInitialLoadRef.current = false;
       });
-  
+
       console.timeEnd('loadContent');
     }
   }, []);
@@ -119,7 +119,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       console.time('formatContentInQuill');
       const codeBlocks = quillRef.current.root.querySelectorAll('pre');
       console.log(`Found ${codeBlocks.length} code blocks`);
-  
+
       codeBlocks.forEach((block, index) => {
         requestAnimationFrame(() => {
           console.time(`highlightBlock${index}`);
@@ -127,7 +127,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
           console.timeEnd(`highlightBlock${index}`);
         });
       });
-  
+
       console.log("Formatting and syntax highlighting applied");
       console.timeEnd('formatContentInQuill');
     }
@@ -179,7 +179,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       console.time('initializeQuill');
       initializeQuill();
       console.timeEnd('initializeQuill');
-  
+
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
         console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
         lastLoadedNodeIdRef.current = selectedNode.id;
@@ -194,9 +194,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       // Reset the isInitialLoadRef flag when the editor is closed
       isInitialLoadRef.current = true;
     }
-  
+
     window.addEventListener('beforeunload', confirmLeave);
-  
+
     return () => {
       window.removeEventListener('beforeunload', confirmLeave);
     };
@@ -274,6 +274,16 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
                 />
               </div>
             )}
+            <button
+              className="detach-node-button"
+              onClick={() => {
+                if (selectedNode) {
+                  handleDetachNode(selectedNode.id);
+                }
+              }}
+            >
+              Detach Node
+            </button>
             <div className={`save-indicator ${saveStatus}`}>
               {saveStatus === 'loading' && 'Loading...'}
               {saveStatus === 'saving' && 'Saving...'}
