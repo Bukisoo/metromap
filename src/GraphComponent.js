@@ -5,7 +5,7 @@ import RetroButton from './RetroButton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
-const addIconPath = "M 0 -18 L 0 18 M -18 0 L 18 0";
+const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0";
 const binIconPath = "M -10 -10 Z M -3 -5 V 10 M 3 -5 V 10 M -15 -10 L -15 -13 L -5 -13 L -5 -15 L 5 -15 L 5 -13 L 15 -13 L 15 -10 L 10 -10 L 10 15 L -10 15 L -10 -10 L -15 -10 L -10 -10 L -10 15 L 10 15 L 10 -10 L 15 -10 L 15 -13 L 5 -13 L 5 -15 L -5 -15 L -5 -13 L -15 -13 L -15 -10 M -10 -10 L 10 -10";
 const undoIconPath = "M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15";
 
@@ -86,8 +86,8 @@ const GraphComponent = ({
   };
 
   const createForceDirectedGraph = () => {
-    const width = 10000; 
-    const height = 10000; 
+    const width = 10000;
+    const height = 10000;
     const viewWidth = window.innerWidth / (isEditorVisible ? 2 : 1);
     const viewHeight = window.innerHeight;
 
@@ -114,10 +114,17 @@ const GraphComponent = ({
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
         zoomGroup.attr('transform', event.transform);
-        zoomRef.current = event.transform;
+        zoomRef.current = event.transform; // Store current zoom transform
       });
 
     svg.call(zoom);
+
+    // Maintain the user's zoom/pan unless it's the first load.
+    if (zoomRef.current === d3.zoomIdentity) {
+      svg.call(zoom.transform, d3.zoomIdentity.translate(viewWidth / 2 - width / 2, viewHeight / 2 - height / 2));
+    } else {
+      svg.call(zoom.transform, zoomRef.current);
+    }
 
     const flatNodes = flattenNodes(nodes);
     const links = getLinks(nodes).filter(link => link && link.source && link.target);
@@ -132,8 +139,6 @@ const GraphComponent = ({
       .alphaDecay(0.05);
 
     simulationRef.current = simulation;
-
-    svg.call(zoom.transform, d3.zoomIdentity.translate(viewWidth / 2 - width / 2, viewHeight / 2 - height / 2));
 
     const linkGroup = zoomGroup.append('g').attr('class', 'links');
 
@@ -275,10 +280,7 @@ const GraphComponent = ({
 
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
-      link.attr('d', d => {
-        if (!d || !d.source || !d.target) return '';
-        return calculateLinkPath(d, width, height);
-      });
+      link.attr('d', d => calculateLinkPath(d, width, height));
     });
 
     const calculateLinkPath = (d) => {
@@ -351,11 +353,11 @@ const GraphComponent = ({
       if (!event.active) simulation.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-    
+
       const binButton = svg.select('.bin-button');
       const binBounds = binButton.node().getBoundingClientRect();
       const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
-    
+
       if (
         nodeBounds.left < binBounds.right &&
         nodeBounds.right > binBounds.left &&
@@ -372,7 +374,7 @@ const GraphComponent = ({
           }
           return false;
         });
-    
+
         if (targetNode) {
           connectNodes(d, targetNode);
         }
@@ -392,6 +394,9 @@ const GraphComponent = ({
   };
 
   const addNode = () => {
+    // Store the current zoom state before making changes
+    const currentZoom = zoomRef.current;
+
     const randomStation = stations[Math.floor(Math.random() * stations.length)] || "New Node";
     const width = 10000;
     const height = 10000;
@@ -405,6 +410,7 @@ const GraphComponent = ({
       y: height / 2,
       childrenHidden: false
     };
+
     setNodes(prevNodes => {
       const updatedNodes = [...prevNodes, newNode];
       updateGraph(updatedNodes);
@@ -417,6 +423,10 @@ const GraphComponent = ({
       simulation.nodes(flattenNodes([...nodes, newNode]));
       simulation.alpha(1).restart();
     }
+
+    // Reapply the previous zoom state
+    const svg = d3.select(svgRef.current);
+    svg.call(d3.zoom().transform, currentZoom);
   };
 
   const confirmAndRemoveNode = (nodeToRemove) => {
@@ -503,7 +513,10 @@ const GraphComponent = ({
     return node;
   };
 
+  // Modify the connectNodes function similarly to preserve zoom state:
   const connectNodes = (sourceNode, targetNode) => {
+    const currentZoom = zoomRef.current;  // Store zoom before updating
+
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
 
     const isDescendant = (parent, child) => {
@@ -551,6 +564,10 @@ const GraphComponent = ({
       updateHistory(finalNodes);
       return finalNodes;
     });
+
+    // Reapply the zoom state after updating nodes
+    const svg = d3.select(svgRef.current);
+    svg.call(d3.zoom().transform, currentZoom);
   };
 
   return <svg ref={svgRef}></svg>;

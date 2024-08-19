@@ -56,12 +56,10 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
         theme: 'snow',
         modules: {
           toolbar: [
-            [{ 'header': [1, 2, false] }],
-            ['bold', 'italic', 'underline'],
-            ['image', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'size': ['small', false, 'large', 'huge'] }],
-            ['clean']
+            [{ 'header': [1, false] }], // Only two options: title (h1) and regular text
+            ['bold', 'italic', 'underline'], // Basic formatting options
+            ['link', 'blockquote'], // Add link and citation tools
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }], // Lists (ordered and bullet)
           ],
           syntax: {
             highlight: (text) => window.hljs.highlightAuto(text).value,
