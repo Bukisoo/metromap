@@ -34,6 +34,7 @@ const GraphComponent = ({
   const simulationRef = useRef(null);
   const zoomRef = useRef(d3.zoomIdentity);
   const [isDragging, setIsDragging] = useState(false); 
+  const dragTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (svgRef.current) {
@@ -359,8 +360,18 @@ const GraphComponent = ({
     };
 
     function dragstarted(event) {
-      setIsDragging(true); 
-      if (!event.active) simulation.alphaTarget(0.3).restart();
+      // Clear any existing timeout to avoid false triggering
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+      }
+    
+      // Set a timeout to update the dragging state after 100ms
+      dragTimeoutRef.current = setTimeout(() => {
+        setIsDragging(true);
+        dragTimeoutRef.current = null;
+      }, 100);
+    
+      if (!event.active) simulationRef.current.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
     }
@@ -371,15 +382,23 @@ const GraphComponent = ({
     }
 
     function dragended(event, d, svg, flatNodes) {
-      setIsDragging(false); 
-      if (!event.active) simulation.alphaTarget(0);
+      // Clear the timeout if drag ends before 100ms
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      } else {
+        // If timeout has already triggered, reset dragging state
+        setIsDragging(false);
+      }
+    
+      if (!event.active) simulationRef.current.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-
+    
       const binButton = svg.select('.bin-button');
       const binBounds = binButton.node().getBoundingClientRect();
       const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
-
+    
       if (
         nodeBounds.left < binBounds.right &&
         nodeBounds.right > binBounds.left &&
@@ -396,7 +415,7 @@ const GraphComponent = ({
           }
           return false;
         });
-
+    
         if (targetNode) {
           connectNodes(d, targetNode);
         }
