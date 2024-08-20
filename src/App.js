@@ -3,68 +3,75 @@ import GraphComponent from './GraphComponent';
 import EditorComponent from './EditorComponent';
 import './App.css';
 
-const initialGraph = (stations) => [
-  {
-    id: 'main',
-    name: stations[0] || 'Main Node',
-    color: '#e0e0e0',
-    notes: '',
-    children: [
-      {
-        id: 'child-1',
-        name: stations[1] || 'Child 1',
-        color: '#455EED',
-        notes: '',
-        children: [
-          {
-            id: 'subchild-1-1',
-            name: stations[2] || 'Subchild 1-1',
-            color: '#455EED',
-            notes: '',
-            children: []
-          },
-          {
-            id: 'subchild-1-2',
-            name: stations[3] || 'Subchild 1-2',
-            color: '#455EED',
-            notes: '',
-            children: []
-          }
-        ]
-      },
-      {
-        id: 'child-2',
-        name: stations[4] || 'Child 2',
-        color: '#F7AFE7',
-        notes: '',
-        children: [
-          {
-            id: 'subchild-2-1',
-            name: stations[5] || 'Subchild 2-1',
-            color: '#F7AFE7',
-            notes: '',
-            children: []
-          },
-          {
-            id: 'subchild-2-2',
-            name: stations[6] || 'Subchild 2-2',
-            color: '#F7AFE7',
-            notes: '',
-            children: []
-          }
-        ]
-      },
-      {
-        id: 'child-3',
-        name: stations[7] || 'Child 3',
-        color: '#FFCF25',
-        notes: '',
-        children: []
-      }
-    ],
-    childrenHidden: false
-  }
-];
+const initialGraph = (stations) => {
+  const defaultStations = ['Main Node', 'Local Station 1', 'Local Substation 1-1', 'Local Substation 1-2', 'Local Station 2', 'Local Substation 2-1', 'Local Substation 2-2', 'Local Station 3'];
+
+  const combinedStations = stations.concat(defaultStations.slice(stations.length));
+
+  return [
+    {
+      id: 'main',
+      name: combinedStations[0],
+      color: '#e0e0e0',
+      notes: '',
+      children: [
+        {
+          id: 'child-1',
+          name: combinedStations[1],
+          color: '#455EED',
+          notes: '',
+          children: [
+            {
+              id: 'subchild-1-1',
+              name: combinedStations[2],
+              color: '#455EED',
+              notes: '',
+              children: []
+            },
+            {
+              id: 'subchild-1-2',
+              name: combinedStations[3],
+              color: '#455EED',
+              notes: '',
+              children: []
+            }
+          ]
+        },
+        {
+          id: 'child-2',
+          name: combinedStations[4],
+          color: '#F7AFE7',
+          notes: '',
+          children: [
+            {
+              id: 'subchild-2-1',
+              name: combinedStations[5],
+              color: '#F7AFE7',
+              notes: '',
+              children: []
+            },
+            {
+              id: 'subchild-2-2',
+              name: combinedStations[6],
+              color: '#F7AFE7',
+              notes: '',
+              children: []
+            }
+          ]
+        },
+        {
+          id: 'child-3',
+          name: combinedStations[7],
+          color: '#FFCF25',
+          notes: '',
+          children: []
+        }
+      ],
+      childrenHidden: false
+    }
+  ];
+};
+
 
 const loadGraph = () => {
   const savedGraph = localStorage.getItem('graph');
@@ -119,10 +126,16 @@ const fetchStations = async (latitude, longitude) => {
   const url = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:10000,${latitude},${longitude})[public_transport=station];out;`;
   const response = await fetch(url);
   const data = await response.json();
-  return data.elements
+  
+  // Filter and log stations
+  const stationNames = data.elements
     .map(element => element.tags.name)
     .filter(name => name && name.split(' ').length <= 3);
+    
+  console.log("Fetched stations:", stationNames);
+  return stationNames;
 };
+
 
 const App = () => {
   const [nodes, setNodes] = useState(loadGraph());
@@ -139,6 +152,7 @@ const App = () => {
         const { latitude, longitude } = position.coords;
         const fetchedStations = await fetchStations(latitude, longitude);
         setStations(fetchedStations);
+  
         const initialNodes = initialGraph(fetchedStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
@@ -146,9 +160,7 @@ const App = () => {
         // Add initial state to history only once
         updateHistory(initialNodes);
       }, () => {
-        const defaultStations = ['Main Station', 'Child Station 1', 'Child Station 2', 'Child Station 3'];
-        setStations(defaultStations);
-        const initialNodes = initialGraph(defaultStations);
+        const initialNodes = initialGraph([]); // Pass an empty array for fallback
         setNodes(initialNodes);
         saveGraph(initialNodes);
   
@@ -156,13 +168,11 @@ const App = () => {
         updateHistory(initialNodes);
       });
     } else {
-      // If nodes already exist, ensure the initial state is in history
       if (history.length === 0) {
         updateHistory(nodes);
       }
     }
   }, [nodes]);
-  
 
   const handleDetachNode = (nodeId) => {
     const detachNode = (nodes) => {
