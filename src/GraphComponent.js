@@ -455,22 +455,6 @@ const GraphComponent = ({
     });
   };
 
-  const updateNodeProperty = (id, property, value) => {
-    const updateNodes = (nodes) => {
-      return nodes.map(node => {
-        if (node.id === id) {
-          return { ...node, [property]: value };
-        } else if (node.children) {
-          return { ...node, children: updateNodes(node.children) };
-        }
-        return node;
-      });
-    };
-    const updatedNodes = updateNodes(nodes);
-    setNodes(updatedNodes);
-    updateGraph(updatedNodes);
-  };
-
   const toggleChildrenVisibility = (node) => {
     const toggleHidden = (nodes) => {
       return nodes.map(n => {

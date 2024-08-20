@@ -208,6 +208,11 @@ const App = () => {
     const updateNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
+          if (property === 'color') {
+            // Propagate the color change to all children with the same original color
+            const originalColor = node.color;
+            node = updateNodeAndChildrenColors(node, value, originalColor);
+          }
           return { ...node, [property]: value };
         } else if (node.children) {
           return { ...node, children: updateNodes(node.children) };
@@ -217,23 +222,42 @@ const App = () => {
     };
     const updatedNodes = updateNodes(nodes);
     setNodes(updatedNodes);
-
+  
     if (property === 'notes') {
       saveNodeNote(id, value);
     } else {
       saveGraph(updatedNodes);
     }
-
+  
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-
+  
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
-
+  
     updateHistory(updatedNodes, `update ${property} of node ${id}`);
+  };
+
+  const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
+    const updateColor = (nodes) => {
+      return nodes.map(n => {
+        if (n.color === originalColor) {
+          n.color = newColor;
+        }
+        if (n.children) {
+          n.children = updateColor(n.children);
+        }
+        return n;
+      });
+    };
+    node.color = newColor;
+    if (node.children) {
+      node.children = updateColor(node.children);
+    }
+    return node;
   };
 
   const updateGraph = (newNodes, action = "update graph") => {
