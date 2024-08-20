@@ -185,14 +185,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
         lastLoadedNodeIdRef.current = selectedNode.id;
         setTitle(selectedNode.name || '');
         loadContent(selectedNode.notes || '');
-      } else if (selectedNode && selectedNode.id === lastLoadedNodeIdRef.current) {
-        // Reload the content for the same node if the editor is reopened
-        loadContent(selectedNode.notes || '');
       }
     } else {
       cleanupQuill();
-      // Reset the isInitialLoadRef flag when the editor is closed
-      isInitialLoadRef.current = true;
     }
 
     window.addEventListener('beforeunload', confirmLeave);
