@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import ReactDOM from 'react-dom';
 import RetroButton from './RetroButton';
@@ -33,12 +33,32 @@ const GraphComponent = ({
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
   const zoomRef = useRef(d3.zoomIdentity);
+  const [isDragging, setIsDragging] = useState(false); 
 
   useEffect(() => {
     if (svgRef.current) {
       createForceDirectedGraph();
     }
   }, [nodes, isEditorVisible]);
+
+  useEffect(() => {
+    const binButtonElement = d3.select('.bin-button');
+  
+    if (isDragging) {
+      // Flash strong red first, then apply the normal red glow
+      binButtonElement.classed('flash-strong-red', true);
+  
+      // Remove the flash-strong-red class after the animation completes and add the bin-glow class
+      setTimeout(() => {
+        binButtonElement.classed('flash-strong-red', false);
+        binButtonElement.classed('bin-glow', true);
+      }, 200); // Matches the animation duration (0.2s)
+    } else {
+      // Remove all glow effects when dragging stops
+      binButtonElement.classed('bin-glow', false);
+      binButtonElement.classed('flash-strong-red', false);
+    }
+  }, [isDragging]);
 
   useEffect(() => {
     if (selectedNode) {
@@ -261,7 +281,7 @@ const GraphComponent = ({
     ReactDOM.render(<RetroButton iconPath={addIconPath} onClick={addNode} />, addButton.node());
 
     const binButton = svg.append('g')
-      .attr('class', 'icon-circle bin-button')
+      .attr('class', 'icon-circle bin-button no-hover-glow')  // Add 'no-hover-glow' class
       .attr('transform', 'translate(120, 30)')
       .append('foreignObject')
       .attr('width', 75)
@@ -339,6 +359,7 @@ const GraphComponent = ({
     };
 
     function dragstarted(event) {
+      setIsDragging(true); 
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
@@ -350,6 +371,7 @@ const GraphComponent = ({
     }
 
     function dragended(event, d, svg, flatNodes) {
+      setIsDragging(false); 
       if (!event.active) simulation.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
