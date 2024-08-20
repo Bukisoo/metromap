@@ -84,7 +84,7 @@ const saveGraph = (graph) => {
 const saveNodeNote = (id, newNote) => {
   const savedGraph = localStorage.getItem('graph');
   if (!savedGraph) return;
-  
+
   const graph = JSON.parse(savedGraph);
   const updateNote = (nodes) => {
     return nodes.map(node => {
@@ -98,8 +98,7 @@ const saveNodeNote = (id, newNote) => {
   };
   const updatedGraph = updateNote(graph);
   localStorage.setItem('graph', JSON.stringify(updatedGraph));
-  
-  // Helper function to collect notes
+
   const collectNotes = (nodes) => {
     let notesList = [];
     nodes.forEach(node => {
@@ -143,15 +142,27 @@ const App = () => {
         const initialNodes = initialGraph(fetchedStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
+  
+        // Add initial state to history only once
+        updateHistory(initialNodes);
       }, () => {
         const defaultStations = ['Main Station', 'Child Station 1', 'Child Station 2', 'Child Station 3'];
         setStations(defaultStations);
         const initialNodes = initialGraph(defaultStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
+  
+        // Add initial state to history only once
+        updateHistory(initialNodes);
       });
+    } else {
+      // If nodes already exist, ensure the initial state is in history
+      if (history.length === 0) {
+        updateHistory(nodes);
+      }
     }
   }, [nodes]);
+  
 
   const handleDetachNode = (nodeId) => {
     const detachNode = (nodes) => {
@@ -172,7 +183,6 @@ const App = () => {
       });
 
       if (nodeToDetach) {
-        // Set default color to indicate top-level node
         nodeToDetach.color = '#e0e0e0';
         updatedNodes.push(nodeToDetach); // Add it to the top-level nodes
       }
@@ -181,7 +191,7 @@ const App = () => {
 
     const updatedNodes = detachNode(nodes);
     setNodes(updatedNodes);
-    updateGraph(updatedNodes, true); // Mark as a significant change
+    updateGraph(updatedNodes, "detach node"); // Mark as a significant change
   };
 
   const updateNodeProperty = (id, property, value) => {
@@ -213,31 +223,48 @@ const App = () => {
       [id]: { ...prev[id], [property]: value }
     }));
 
-    updateHistory(updatedNodes);
+    updateHistory(updatedNodes, `update ${property} of node ${id}`);
   };
 
-  const updateGraph = (newNodes) => {
+  const updateGraph = (newNodes, action = "update graph") => {
     setNodes(newNodes);
     saveGraph(newNodes);
+    updateHistory(newNodes, action);
   };
 
   const updateHistory = (newNodes) => {
     setHistory(prevHistory => {
-      const newHistory = [...prevHistory, JSON.parse(JSON.stringify(newNodes))];
-      if (newHistory.length > 10) newHistory.shift();
+      const lastState = prevHistory[prevHistory.length - 1];
+  
+      // Avoid adding duplicate states
+      if (JSON.stringify(lastState) !== JSON.stringify(newNodes)) {
+        const newHistory = [...prevHistory, JSON.parse(JSON.stringify(newNodes))];
+        if (newHistory.length > 10) newHistory.shift(); // Limit history length to 10
+        return newHistory;
+      }
+
+      //log the history length
+      console.log("History length: " + prevHistory.length);
+  
+      return prevHistory;
+    });
+  };
+  
+
+  const undoAction = () => {
+    setHistory((prevHistory) => {
+      if (prevHistory.length <= 1) return prevHistory; // Prevent undo if there's only one state
+  
+      const newHistory = prevHistory.slice(0, -1); // Remove the last state
+      const lastState = newHistory[newHistory.length - 1]; // Get the new last state
+  
+      setNodes([...lastState]); // Force a re-render by spreading the array
+      saveGraph(lastState); // Save the previous state to localStorage
+  
       return newHistory;
     });
   };
-
-  const undoAction = () => {
-    setHistory(prevHistory => {
-      if (prevHistory.length === 0) return prevHistory;
-      const lastState = prevHistory[prevHistory.length - 1];
-      setNodes(lastState);
-      return prevHistory.slice(0, -1);
-    });
-  };
-
+  
   return (
     <div className="app-container">
       <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>

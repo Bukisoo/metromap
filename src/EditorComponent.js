@@ -58,7 +58,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
           toolbar: [
             [{ 'header': [1, false] }], // Only two options: title (h1) and regular text
             ['bold', 'italic', 'underline'], // Basic formatting options
-            ['link', 'blockquote'], // Add link and citation tools
+            ['link', 'blockquote','code-block'], // Links, quotes and code blocks
             [{ 'list': 'ordered' }, { 'list': 'bullet' }], // Lists (ordered and bullet)
           ],
           syntax: {
