@@ -4,8 +4,30 @@ import EditorComponent from './EditorComponent';
 import { fetchStations } from './fetchStations';
 import './App.css';
 
+const rootStyle = getComputedStyle(document.documentElement);
+const accentColor = rootStyle.getPropertyValue('--accent-color').trim();
+
 const initialGraph = (stations) => {
-  const defaultStations = ['Main Node', 'Local Station 1', 'Local Substation 1-1', 'Local Substation 1-2', 'Local Station 2', 'Local Substation 2-1', 'Local Substation 2-2', 'Local Station 3'];
+  // Get the root style and fetch the CSS variables
+  const rootStyle = getComputedStyle(document.documentElement);
+  const accentColor = rootStyle.getPropertyValue('--accent-color').trim();
+  const retroBlue = rootStyle.getPropertyValue('--retro-blue').trim();
+  const retroPink = rootStyle.getPropertyValue('--retro-pink').trim();
+  const retroYellow = rootStyle.getPropertyValue('--retro-yellow').trim();
+  const retroTeal = rootStyle.getPropertyValue('--retro-teal').trim();
+  const retroOrange = rootStyle.getPropertyValue('--retro-orange').trim();
+  const retroRed = rootStyle.getPropertyValue('--retro-red').trim();
+
+  const defaultStations = [
+    'Main Node',
+    'Local Station 1',
+    'Local Substation 1-1',
+    'Local Substation 1-2',
+    'Local Station 2',
+    'Local Substation 2-1',
+    'Local Substation 2-2',
+    'Local Station 3'
+  ];
 
   const combinedStations = stations.length > 0 ? stations.concat(defaultStations.slice(stations.length)) : defaultStations;
 
@@ -13,26 +35,26 @@ const initialGraph = (stations) => {
     {
       id: 'main',
       name: combinedStations[0],
-      color: '#e0e0e0',
+      color: accentColor,
       notes: '',
       children: [
         {
           id: 'child-1',
           name: combinedStations[1],
-          color: '#455EED',
+          color: retroBlue,
           notes: '',
           children: [
             {
               id: 'subchild-1-1',
               name: combinedStations[2],
-              color: '#455EED',
+              color: retroBlue,
               notes: '',
               children: []
             },
             {
               id: 'subchild-1-2',
               name: combinedStations[3],
-              color: '#455EED',
+              color: retroBlue,
               notes: '',
               children: []
             }
@@ -41,20 +63,20 @@ const initialGraph = (stations) => {
         {
           id: 'child-2',
           name: combinedStations[4],
-          color: '#F7AFE7',
+          color: retroPink,
           notes: '',
           children: [
             {
               id: 'subchild-2-1',
               name: combinedStations[5],
-              color: '#F7AFE7',
+              color: retroPink,
               notes: '',
               children: []
             },
             {
               id: 'subchild-2-2',
               name: combinedStations[6],
-              color: '#F7AFE7',
+              color: retroPink,
               notes: '',
               children: []
             }
@@ -63,7 +85,7 @@ const initialGraph = (stations) => {
         {
           id: 'child-3',
           name: combinedStations[7],
-          color: '#FFCF25',
+          color: retroYellow,
           notes: '',
           children: []
         }
@@ -283,6 +305,7 @@ const App = () => {
   
   return (
     <div className="app-container">
+      <div className="app-title">MetroMap</div> {/* App title */}
       <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
         <GraphComponent
           nodes={nodes}

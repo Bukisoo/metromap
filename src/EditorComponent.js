@@ -11,8 +11,15 @@ import './EditorComponent.css';
 if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
-
-const colorOptions = ['#455EED', '#F7AFE7', '#FFCF25', '#51CAB4', '#FD7543', '#FD4370'];
+const rootStyle = getComputedStyle(document.documentElement);
+const colorOptions = [  
+  rootStyle.getPropertyValue('--retro-blue').trim(),
+  rootStyle.getPropertyValue('--retro-pink').trim(),
+  rootStyle.getPropertyValue('--retro-yellow').trim(),
+  rootStyle.getPropertyValue('--retro-teal').trim(),
+  rootStyle.getPropertyValue('--retro-orange').trim(),
+  rootStyle.getPropertyValue('--retro-red').trim()
+];
 
 const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, onNodeChange, handleDetachNode }) => {
   const editorRef = useRef(null);

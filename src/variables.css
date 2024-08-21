@@ -1,19 +1,28 @@
 :root {
-    /* Background colors */
-    --graph-background: #EEEDDD;
-    --graph-textcolor: #000000;
-    --editor-background: #333333;
-    --grid-color: #c9c3a4;
-  
-    /* Accent color */
-    --accent-color: #ec5604;
-  
-    /* Save indicator colors */
-    --save-indicator-loading: #ff0000;
-    --save-indicator-saved: #00ff00;
-    --save-indicator-saving: #ffa500;
+  /* Background colors */
+  --graph-background: #EEEDDD;
+  --graph-textcolor: #000000;
+  --editor-background: #333333;
+  --grid-color: #c9c3a4;
 
-    --button-spacing: 10px;
-    --button-size: 70px;
-    --button-padding: 33px;
-  }
+  /* Accent color */
+  --accent-color: #ec5604;
+
+  /* Save indicator colors */
+  --save-indicator-loading: #ff0000;
+  --save-indicator-saved: #00ff00;
+  --save-indicator-saving: #ffa500;
+
+  /* Action button spacing */
+  --button-spacing: 10px;
+  --button-size: 70px;
+  --button-padding: 33px;
+
+  /* Retro-Futuristic Palette */
+  --retro-blue: #3A47D5;
+  --retro-pink: #E285C1;
+  --retro-yellow: #F7D038;
+  --retro-teal: #4DB1A1;
+  --retro-orange: #F56A35;
+  --retro-red: #E94A5C;
+}

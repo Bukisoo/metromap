@@ -11,8 +11,15 @@ const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L
 const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M -3 -5 V 10 M 3 -5 V 10 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13";
 const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
 
+const rootStyle = getComputedStyle(document.documentElement);
+
 const colorPalette = [
-  '#455EED', '#F7AFE7', '#FFCF25', '#51CAB4', '#FD7543', '#FD4370'
+  rootStyle.getPropertyValue('--retro-blue').trim(),
+  rootStyle.getPropertyValue('--retro-pink').trim(),
+  rootStyle.getPropertyValue('--retro-yellow').trim(),
+  rootStyle.getPropertyValue('--retro-teal').trim(),
+  rootStyle.getPropertyValue('--retro-orange').trim(),
+  rootStyle.getPropertyValue('--retro-red').trim()
 ];
 
 const GraphComponent = ({
@@ -35,12 +42,12 @@ const GraphComponent = ({
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
   const zoomRef = useRef(d3.zoomIdentity);
-  const [isDragging, setIsDragging] = useState(false); 
+  const [isDragging, setIsDragging] = useState(false);
   const dragTimeoutRef = useRef(null);
-  const rootStyle = getComputedStyle(document.documentElement);
   const graphBackground = rootStyle.getPropertyValue('--graph-background').trim();
   const graphTextcolor = rootStyle.getPropertyValue('--graph-textcolor').trim();
   const gridColor = rootStyle.getPropertyValue('--grid-color').trim();
+  const accentColor = rootStyle.getPropertyValue('--accent-color').trim();
   const buttonSize = parseFloat(rootStyle.getPropertyValue('--button-size').trim());
   const buttonSpacing = parseFloat(rootStyle.getPropertyValue('--button-spacing').trim());
   const buttonPadding = parseFloat(rootStyle.getPropertyValue('--button-padding').trim());
@@ -53,11 +60,11 @@ const GraphComponent = ({
 
   useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
-  
+
     if (isDragging) {
       // Flash strong red first, then apply the normal red glow
       binButtonElement.classed('flash-strong-red', true);
-  
+
       // Remove the flash-strong-red class after the animation completes and add the bin-glow class
       setTimeout(() => {
         binButtonElement.classed('flash-strong-red', false);
@@ -234,26 +241,29 @@ const GraphComponent = ({
         .attr('text-anchor', 'start')
         .attr('dominant-baseline', 'central')
         .attr('transform', 'rotate(-45)')
-        .attr('x', 20)
+        .attr('x', 15)
         .attr('y', -20)
         .attr('font-weight', 'bold')
         .style('user-select', 'none')
         .style('fill', graphTextcolor)
-        .style('font-size', '15px');
+        .style('font-size', '15px')
+        .style('font-family', 'EB Garamond, serif'); // Add this line to use EB Garamond
+
 
       const bbox = text.node().getBBox();
 
       const diagonal = Math.sqrt(bbox.width * bbox.width + bbox.height * bbox.height);
 
       g.insert('rect', 'text')
-        .attr('x', 15)
+        .attr('x', 10)
         .attr('y', -30)
         .attr('width', diagonal + 5)
         .attr('height', 20)
         .attr('transform', 'rotate(-45)')
         .attr('rx', 5)
         .attr('ry', 5)
-        .style('fill', graphBackground);
+        .style('fill', graphBackground)
+        .style('opacity', 0.8);
     });
 
     node.each(function (d) {
@@ -285,29 +295,29 @@ const GraphComponent = ({
     const firstButtonY = window.innerHeight - buttonSize - buttonPadding;
 
     const addButton = svg.append('g')
-    .attr('class', 'icon-circle add-button')
-    .attr('transform', `translate(${firstButtonX}, ${firstButtonY})`)
-    .append('foreignObject')
-    .attr('width', 75)
-    .attr('height', 75);
+      .attr('class', 'icon-circle add-button')
+      .attr('transform', `translate(${firstButtonX}, ${firstButtonY})`)
+      .append('foreignObject')
+      .attr('width', 75)
+      .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={addIconPath} onClick={addNode} />, addButton.node());
 
     const binButton = svg.append('g')
-    .attr('class', 'icon-circle bin-button no-hover-glow')  // Add 'no-hover-glow' class
-    .attr('transform', `translate(${firstButtonX + buttonSize + buttonSpacing}, ${firstButtonY})`)
-    .append('foreignObject')
-    .attr('width', 75)
-    .attr('height', 75);
+      .attr('class', 'icon-circle bin-button no-hover-glow')
+      .attr('transform', `translate(${firstButtonX + buttonSize + buttonSpacing}, ${firstButtonY})`)
+      .append('foreignObject')
+      .attr('width', 75)
+      .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />, binButton.node());
 
     const undoButton = svg.append('g')
-    .attr('class', 'icon-circle undo-button')
-    .attr('transform', `translate(${firstButtonX + 2 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
-    .append('foreignObject')
-    .attr('width', 75)
-    .attr('height', 75);
+      .attr('class', 'icon-circle undo-button')
+      .attr('transform', `translate(${firstButtonX + 2 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
+      .append('foreignObject')
+      .attr('width', 75)
+      .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={undoIconPath} onClick={undoAction} />, undoButton.node());
 
@@ -376,13 +386,13 @@ const GraphComponent = ({
       if (dragTimeoutRef.current) {
         clearTimeout(dragTimeoutRef.current);
       }
-    
+
       // Set a timeout to update the dragging state after 100ms
       dragTimeoutRef.current = setTimeout(() => {
         setIsDragging(true);
         dragTimeoutRef.current = null;
       }, 100);
-    
+
       if (!event.active) simulationRef.current.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
@@ -402,15 +412,15 @@ const GraphComponent = ({
         // If timeout has already triggered, reset dragging state
         setIsDragging(false);
       }
-    
+
       if (!event.active) simulationRef.current.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-    
+
       const binButton = svg.select('.bin-button');
       const binBounds = binButton.node().getBoundingClientRect();
       const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
-    
+
       if (
         nodeBounds.left < binBounds.right &&
         nodeBounds.right > binBounds.left &&
@@ -427,7 +437,7 @@ const GraphComponent = ({
           }
           return false;
         });
-    
+
         if (targetNode) {
           connectNodes(d, targetNode);
         }
@@ -465,7 +475,7 @@ const GraphComponent = ({
     const newNode = {
       id: `node-${Date.now()}`,
       name: randomStation,
-      color: '#e0e0e0',
+      color: accentColor,
       notes: '',
       children: [],
       x: width / 2,
@@ -592,7 +602,7 @@ const GraphComponent = ({
     const addNodeToNewParent = (nodes, sourceNode, targetNode) => {
       return nodes.map(node => {
         if (node.id === targetNode.id && !isDescendant(sourceNode, node)) {
-          const newColor = getNodeColor(targetNode) === '#e0e0e0' ? getNextColor(usedColors) : getNodeColor(targetNode);
+          const newColor = getNodeColor(targetNode) === accentColor ? getNextColor(usedColors) : getNodeColor(targetNode);
           const originalColor = getNodeColor(sourceNode);
           sourceNode = updateNodeAndChildrenColors(sourceNode, newColor, originalColor);
           return {

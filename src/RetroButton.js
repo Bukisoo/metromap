@@ -1,9 +1,6 @@
 import React from 'react';
 import './RetroButton.css';
 
-const rootStyle = getComputedStyle(document.documentElement);
-const buttonSize = rootStyle.getPropertyValue('--button-size').trim();
-
 const RetroButton = ({ iconPath, onClick }) => {
   return (
     <svg className="retro-button" width="75" height="75" viewBox="0 0 100 100" onClick={onClick}>

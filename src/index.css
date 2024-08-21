@@ -1,4 +1,6 @@
 @import url('./variables.css');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@800&display=swap');
+
 
 
 *, *::before, *::after {
@@ -35,6 +37,16 @@ body {
   position: relative;
 }
 
+.app-title {
+  font-family: 'EB Garamond', serif;
+  font-weight: 800;
+  font-size: 48px; /* Adjust the size as needed */
+  color: var(--graph-textcolor); /* You can change this color based on your design */
+  position: absolute;
+  top: 10px; /* Adjust as needed */
+  left: 20px; /* Adjust as needed */
+  z-index: 100; /* Ensure it stays on top */
+}
 
 
 .glow {
