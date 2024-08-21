@@ -163,8 +163,13 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       }
       quillRef.current.off('text-change', handleTextChange);
       quillRef.current = null;
+  
+      // Reset flags
+      isInitialLoadRef.current = true;
+      lastLoadedNodeIdRef.current = null;
     }
   }, [immediateSaveContent, handleTextChange]);
+  
 
   const confirmLeave = useCallback((e) => {
     if (saveStatus === 'saving') {
@@ -179,7 +184,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       console.time('initializeQuill');
       initializeQuill();
       console.timeEnd('initializeQuill');
-
+  
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
         console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
         lastLoadedNodeIdRef.current = selectedNode.id;
@@ -188,24 +193,19 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       }
     } else {
       cleanupQuill();
+  
+      // Reset loading state flags when editor closes
+      isInitialLoadRef.current = true;
+      lastLoadedNodeIdRef.current = null;
     }
-
+  
     window.addEventListener('beforeunload', confirmLeave);
-
+  
     return () => {
       window.removeEventListener('beforeunload', confirmLeave);
     };
   }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill, confirmLeave]);
-
-  const handleNodeChange = () => {
-    if (saveStatus === 'saving') {
-      const confirmChange = window.confirm('You have unsaved changes. Are you sure you want to switch nodes?');
-      if (!confirmChange) {
-        return;
-      }
-    }
-    onNodeChange(); // Trigger the node change
-  };
+  
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
