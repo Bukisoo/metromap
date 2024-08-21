@@ -6,7 +6,7 @@ import './App.css';
 const initialGraph = (stations) => {
   const defaultStations = ['Main Node', 'Local Station 1', 'Local Substation 1-1', 'Local Substation 1-2', 'Local Station 2', 'Local Substation 2-1', 'Local Substation 2-2', 'Local Station 3'];
 
-  const combinedStations = stations.concat(defaultStations.slice(stations.length));
+  const combinedStations = stations.length > 0 ? stations.concat(defaultStations.slice(stations.length)) : defaultStations;
 
   return [
     {
@@ -73,6 +73,7 @@ const initialGraph = (stations) => {
 };
 
 
+
 const loadGraph = () => {
   const savedGraph = localStorage.getItem('graph');
   if (!savedGraph) {
@@ -86,40 +87,6 @@ const saveGraph = (graph) => {
   console.log("Saving the entire graph to localStorage:");
   console.log(graph);
   localStorage.setItem('graph', JSON.stringify(graph));
-};
-
-const saveNodeNote = (id, newNote) => {
-  const savedGraph = localStorage.getItem('graph');
-  if (!savedGraph) return;
-
-  const graph = JSON.parse(savedGraph);
-  const updateNote = (nodes) => {
-    return nodes.map(node => {
-      if (node.id === id) {
-        return { ...node, notes: newNote };
-      } else if (node.children) {
-        return { ...node, children: updateNote(node.children) };
-      }
-      return node;
-    });
-  };
-  const updatedGraph = updateNote(graph);
-  localStorage.setItem('graph', JSON.stringify(updatedGraph));
-
-  const collectNotes = (nodes) => {
-    let notesList = [];
-    nodes.forEach(node => {
-      notesList.push(`Node: ${node.id}, Notes: ${node.notes}`);
-      if (node.children) {
-        notesList = notesList.concat(collectNotes(node.children));
-      }
-    });
-    return notesList;
-  };
-
-  const allNotes = collectNotes(updatedGraph);
-  console.log("Saving note for node to localStorage:");
-  console.log(allNotes.join('\n'));
 };
 
 const fetchStations = async (latitude, longitude) => {
@@ -146,13 +113,40 @@ const App = () => {
   const [stations, setStations] = useState([]);
   const [usedColors, setUsedColors] = useState([]);
 
+  const saveNodeNote = (id, newNote) => {
+    // Update the in-memory graph first
+    setNodes(prevNodes => {
+      const updateNote = (nodes) => {
+        return nodes.map(node => {
+          if (node.id === id) {
+            return { ...node, notes: newNote };
+          } else if (node.children) {
+            return { ...node, children: updateNote(node.children) };
+          }
+          return node;
+        });
+      };
+  
+      const updatedNodes = updateNote(prevNodes);
+  
+      // Save the updated graph to localStorage
+      localStorage.setItem('graph', JSON.stringify(updatedNodes));
+  
+      // Update history after the nodes are updated
+      updateHistory(updatedNodes);
+  
+      return updatedNodes;
+    });
+  };
+
   useEffect(() => {
     if (nodes.length === 0) {
       navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
         const fetchedStations = await fetchStations(latitude, longitude);
         setStations(fetchedStations);
-  
+        
+        // Wait until stations are fetched before initializing nodes
         const initialNodes = initialGraph(fetchedStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
@@ -172,7 +166,8 @@ const App = () => {
         updateHistory(nodes);
       }
     }
-  }, [nodes]);
+  }, [nodes, history.length]);
+  
 
   const handleDetachNode = (nodeId) => {
     const detachNode = (nodes) => {
@@ -205,40 +200,45 @@ const App = () => {
   };
 
   const updateNodeProperty = (id, property, value) => {
-    const updateNodes = (nodes) => {
-      return nodes.map(node => {
-        if (node.id === id) {
-          if (property === 'color') {
-            // Propagate the color change to all children with the same original color
-            const originalColor = node.color;
-            node = updateNodeAndChildrenColors(node, value, originalColor);
+    setNodes(prevNodes => {
+      const updateNodes = (nodes) => {
+        return nodes.map(node => {
+          if (node.id === id) {
+            if (property === 'color') {
+              // Propagate the color change to all children with the same original color
+              const originalColor = node.color;
+              node = updateNodeAndChildrenColors(node, value, originalColor);
+            }
+            return { ...node, [property]: value };
+          } else if (node.children) {
+            return { ...node, children: updateNodes(node.children) };
           }
-          return { ...node, [property]: value };
-        } else if (node.children) {
-          return { ...node, children: updateNodes(node.children) };
-        }
-        return node;
-      });
-    };
-    const updatedNodes = updateNodes(nodes);
-    setNodes(updatedNodes);
+          return node;
+        });
+      };
   
-    if (property === 'notes') {
-      saveNodeNote(id, value);
-    } else {
-      saveGraph(updatedNodes);
-    }
+      const updatedNodes = updateNodes(prevNodes);
   
-    if (selectedNode && selectedNode.id === id) {
-      setSelectedNode({ ...selectedNode, [property]: value });
-    }
+      if (property === 'notes') {
+        // Use the modified saveNodeNote to handle this
+        saveNodeNote(id, value);
+      } else {
+        // Save the graph and update history
+        saveGraph(updatedNodes);
+        updateHistory(updatedNodes);
+      }
   
-    setEditorContent(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [property]: value }
-    }));
+      if (selectedNode && selectedNode.id === id) {
+        setSelectedNode({ ...selectedNode, [property]: value });
+      }
   
-    updateHistory(updatedNodes, `update ${property} of node ${id}`);
+      setEditorContent(prev => ({
+        ...prev,
+        [id]: { ...prev[id], [property]: value }
+      }));
+  
+      return updatedNodes;
+    });
   };
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
