@@ -1,0 +1,19 @@
+:root {
+    /* Background colors */
+    --graph-background: #EEEDDD;
+    --graph-textcolor: #000000;
+    --editor-background: #333333;
+    --grid-color: #c9c3a4;
+  
+    /* Accent color */
+    --accent-color: #ec5604;
+  
+    /* Save indicator colors */
+    --save-indicator-loading: #ff0000;
+    --save-indicator-saved: #00ff00;
+    --save-indicator-saving: #ffa500;
+
+    --button-spacing: 10px;
+    --button-size: 70px;
+    --button-padding: 33px;
+  }

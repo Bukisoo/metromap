@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import GraphComponent from './GraphComponent';
 import EditorComponent from './EditorComponent';
+import { fetchStations } from './fetchStations';
 import './App.css';
 
 const initialGraph = (stations) => {
   const defaultStations = ['Main Node', 'Local Station 1', 'Local Substation 1-1', 'Local Substation 1-2', 'Local Station 2', 'Local Substation 2-1', 'Local Substation 2-2', 'Local Station 3'];
 
-  const combinedStations = stations.concat(defaultStations.slice(stations.length));
+  const combinedStations = stations.length > 0 ? stations.concat(defaultStations.slice(stations.length)) : defaultStations;
 
   return [
     {
@@ -72,7 +73,6 @@ const initialGraph = (stations) => {
   ];
 };
 
-
 const loadGraph = () => {
   const savedGraph = localStorage.getItem('graph');
   if (!savedGraph) {
@@ -122,20 +122,6 @@ const saveNodeNote = (id, newNote) => {
   console.log(allNotes.join('\n'));
 };
 
-const fetchStations = async (latitude, longitude) => {
-  const url = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:10000,${latitude},${longitude})[public_transport=station];out;`;
-  const response = await fetch(url);
-  const data = await response.json();
-  
-  // Filter and log stations
-  const stationNames = data.elements
-    .map(element => element.tags.name)
-    .filter(name => name && name.split(' ').length <= 3);
-    
-  console.log("Fetched stations:", stationNames);
-  return stationNames;
-};
-
 
 const App = () => {
   const [nodes, setNodes] = useState(loadGraph());
@@ -153,27 +139,27 @@ const App = () => {
         const fetchedStations = await fetchStations(latitude, longitude);
         setStations(fetchedStations);
         
-        // Wait until stations are fetched before initializing nodes
         const initialNodes = initialGraph(fetchedStations);
         setNodes(initialNodes);
         saveGraph(initialNodes);
   
-        // Add initial state to history only once
         updateHistory(initialNodes);
       }, () => {
-        const initialNodes = initialGraph([]); // Pass an empty array for fallback
+        const initialNodes = initialGraph([]);
         setNodes(initialNodes);
         saveGraph(initialNodes);
-  
-        // Add initial state to history only once
         updateHistory(initialNodes);
       });
-    } else {
-      if (history.length === 0) {
-        updateHistory(nodes);
-      }
+    } else if (history.length === 0) {
+      updateHistory(nodes);
     }
   }, [nodes, history.length]);
+
+  const updateGraph = (newNodes, action = "update graph") => {
+    setNodes(newNodes);
+    saveGraph(newNodes);
+    updateHistory(newNodes, action);
+  };
   
 
   const handleDetachNode = (nodeId) => {
@@ -260,12 +246,6 @@ const App = () => {
       node.children = updateColor(node.children);
     }
     return node;
-  };
-
-  const updateGraph = (newNodes, action = "update graph") => {
-    setNodes(newNodes);
-    saveGraph(newNodes);
-    updateHistory(newNodes, action);
   };
 
   const updateHistory = (newNodes) => {

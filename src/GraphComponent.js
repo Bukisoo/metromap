@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import ReactDOM from 'react-dom';
 import RetroButton from './RetroButton';
+import { fetchStations } from './fetchStations';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
-const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0";
-const binIconPath = "M -10 -10 Z M -3 -5 V 10 M 3 -5 V 10 M -15 -10 L -15 -13 L -5 -13 L -5 -15 L 5 -15 L 5 -13 L 15 -13 L 15 -10 L 10 -10 L 10 15 L -10 15 L -10 -10 L -15 -10 L -10 -10 L -10 15 L 10 15 L 10 -10 L 15 -10 L 15 -13 L 5 -13 L 5 -15 L -5 -15 L -5 -13 L -15 -13 L -15 -10 M -10 -10 L 10 -10";
-const undoIconPath = "M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15";
+
+const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
+const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M -3 -5 V 10 M 3 -5 V 10 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13";
+const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
 
 const colorPalette = [
   '#455EED', '#F7AFE7', '#FFCF25', '#51CAB4', '#FD7543', '#FD4370'
@@ -35,6 +37,13 @@ const GraphComponent = ({
   const zoomRef = useRef(d3.zoomIdentity);
   const [isDragging, setIsDragging] = useState(false); 
   const dragTimeoutRef = useRef(null);
+  const rootStyle = getComputedStyle(document.documentElement);
+  const graphBackground = rootStyle.getPropertyValue('--graph-background').trim();
+  const graphTextcolor = rootStyle.getPropertyValue('--graph-textcolor').trim();
+  const gridColor = rootStyle.getPropertyValue('--grid-color').trim();
+  const buttonSize = parseFloat(rootStyle.getPropertyValue('--button-size').trim());
+  const buttonSpacing = parseFloat(rootStyle.getPropertyValue('--button-spacing').trim());
+  const buttonPadding = parseFloat(rootStyle.getPropertyValue('--button-padding').trim());
 
   useEffect(() => {
     if (svgRef.current) {
@@ -115,8 +124,8 @@ const GraphComponent = ({
     const svg = d3.select(svgRef.current)
       .attr('width', width)
       .attr('height', height)
-      .style('background-color', '#1e1e1e')
-      .style('background-image', 'radial-gradient(#3a3a3a 1px, transparent 1px)')
+      .style('background-color', graphBackground)
+      .style('background-image', `radial-gradient(${gridColor} 1px, transparent 1px)`)
       .style('background-size', '20px 20px')
       .style('background-position', '0 0')
       .on('click', () => {
@@ -208,14 +217,14 @@ const GraphComponent = ({
     node.append('circle')
       .attr('r', 15)
       .attr('fill', d => getNodeColor(d))
-      .attr('stroke', '#1e1e1e')
+      .attr('stroke', graphBackground)
       .attr('stroke-width', 2)
       .attr('class', 'node-circle');
 
     node.append('circle')
       .attr('r', 7)
       .attr('class', 'node-circle')
-      .attr('fill', '#1e1e1e');
+      .attr('fill', graphBackground);
 
     node.each(function (d) {
       const g = d3.select(this);
@@ -229,7 +238,7 @@ const GraphComponent = ({
         .attr('y', -20)
         .attr('font-weight', 'bold')
         .style('user-select', 'none')
-        .style('fill', '#fff')
+        .style('fill', graphTextcolor)
         .style('font-size', '15px');
 
       const bbox = text.node().getBBox();
@@ -244,7 +253,7 @@ const GraphComponent = ({
         .attr('transform', 'rotate(-45)')
         .attr('rx', 5)
         .attr('ry', 5)
-        .style('fill', '#1e1e1e');
+        .style('fill', graphBackground);
     });
 
     node.each(function (d) {
@@ -272,30 +281,33 @@ const GraphComponent = ({
       }
     });
 
+    const firstButtonX = buttonPadding;
+    const firstButtonY = window.innerHeight - buttonSize - buttonPadding;
+
     const addButton = svg.append('g')
-      .attr('class', 'icon-circle add-button')
-      .attr('transform', 'translate(30, 30)')
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
+    .attr('class', 'icon-circle add-button')
+    .attr('transform', `translate(${firstButtonX}, ${firstButtonY})`)
+    .append('foreignObject')
+    .attr('width', 75)
+    .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={addIconPath} onClick={addNode} />, addButton.node());
 
     const binButton = svg.append('g')
-      .attr('class', 'icon-circle bin-button no-hover-glow')  // Add 'no-hover-glow' class
-      .attr('transform', 'translate(120, 30)')
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
+    .attr('class', 'icon-circle bin-button no-hover-glow')  // Add 'no-hover-glow' class
+    .attr('transform', `translate(${firstButtonX + buttonSize + buttonSpacing}, ${firstButtonY})`)
+    .append('foreignObject')
+    .attr('width', 75)
+    .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />, binButton.node());
 
     const undoButton = svg.append('g')
-      .attr('class', 'icon-circle undo-button')
-      .attr('transform', 'translate(210, 30)')
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
+    .attr('class', 'icon-circle undo-button')
+    .attr('transform', `translate(${firstButtonX + 2 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
+    .append('foreignObject')
+    .attr('width', 75)
+    .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={undoIconPath} onClick={undoAction} />, undoButton.node());
 
@@ -434,11 +446,20 @@ const GraphComponent = ({
     }
   };
 
-  const addNode = () => {
-    // Store the current zoom state before making changes
+  const addNode = async () => {
     const currentZoom = zoomRef.current;
 
-    const randomStation = stations[Math.floor(Math.random() * stations.length)] || "New Node";
+    let randomStation = "New Node";
+    if (stations.length > 0) {
+      randomStation = stations[Math.floor(Math.random() * stations.length)];
+    } else {
+      // Fetch new stations if none are available
+      const { latitude, longitude } = await getGeolocation();
+      const fetchedStations = await fetchStations(latitude, longitude);
+      setStations(fetchedStations);
+      randomStation = fetchedStations.length > 0 ? fetchedStations[Math.floor(Math.random() * fetchedStations.length)] : "New Node";
+    }
+
     const width = 10000;
     const height = 10000;
     const newNode = {
@@ -465,9 +486,18 @@ const GraphComponent = ({
       simulation.alpha(1).restart();
     }
 
-    // Reapply the previous zoom state
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
+  };
+
+  // Helper function to get geolocation
+  const getGeolocation = () => {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve(position.coords),
+        () => reject(new Error('Geolocation failed'))
+      );
+    });
   };
 
   const confirmAndRemoveNode = (nodeToRemove) => {

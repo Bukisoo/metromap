@@ -1,21 +1,4 @@
-:root {
-  /* Background colors */
-  --graph-background: #1e1e1e;
-  --editor-background: #333333;
-
-  /* Accent color */
-  --accent-color: #E40F20;
-
-  /* Save indicator colors */
-  --save-indicator-loading: #ff0000;
-  --save-indicator-saved: #00ff00;
-  --save-indicator-saving: #ffa500;
-
-  /* New colors for glow effects */
-  --white-glow: #ffffff;
-  --red-glow: #ff0000;
-  --bright-red-glow: #ff0000; /* Intense red for the flash */
-}
+@import url('./variables.css');
 
 /* Base styles for buttons */
 .retro-button {
@@ -25,7 +8,7 @@
 
 /* Scale on hover */
 .retro-button:hover {
-  transform: scale(1.1);
+  transform: scale(1.2);
 }
 
 /* White glow effect on hover for all buttons */
@@ -33,57 +16,24 @@
   filter: drop-shadow(0 0 10px var(--white-glow));
 }
 
-/* Stronger, less diffuse red glow when dragging */
-.bin-button.bin-glow {
-  stroke-width: 2px;
-  stroke: var(--red-glow);
-  filter: drop-shadow(0 0 10px var(--red-glow));
+/* Plain button with no border and accent color fill */
+.retro-button rect {
+  fill: var(--accent-color);
+  stroke: none;
 }
 
-/* Override for white glow and stroke on hover */
-.bin-button:hover {
-  stroke: var(--white-glow) !important; /* Ensure white stroke on hover */
-  filter: drop-shadow(0 0 10px var(--white-glow)) !important; /* Ensure white glow on hover */
-}
-
-/* Strong red flash with broader stroke */
-@keyframes strongRedFlash {
-  0% {
-    stroke-width: 6px;
-    stroke: var(--bright-red-glow);
-    filter: brightness(5);
-  }
-  100% {
-    stroke-width: 2px;
-    stroke: var(--red-glow);
-    filter: drop-shadow(0 0 10px var(--red-glow)); /* Transition to the strong red glow */
-  }
-}
-
-/* Apply strong red flash on drag start */
-.bin-button.flash-strong-red rect,
-.bin-button.flash-strong-red path {
-  animation: strongRedFlash 0.2s forwards;
-}
-
-/* Adjust the fill and stroke colors for better visibility */
-.retro-button rect,
 .retro-button path {
-  stroke: var(--accent-color);
+  fill: black;
+  stroke: black;
+  stroke-width: 4px;
 }
 
-.retro-button:hover rect,
+/* Ensure hover effects apply correctly */
+.retro-button:hover rect {
+  fill: var(--accent-color); /* Keeps the background the same on hover */
+}
+
 .retro-button:hover path {
-  stroke: var(--white-glow);
-}
-
-.bin-button.bin-glow rect,
-.bin-button.bin-glow path {
-  stroke: var(--red-glow);
-}
-
-/* Ensure hover takes precedence over dragging */
-.bin-button:hover rect,
-.bin-button:hover path {
-  stroke: var(--white-glow) !important;
+  fill: black; /* Keeps icon color black on hover */
+  stroke: black; /* Keeps stroke color black on hover */
 }
