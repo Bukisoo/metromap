@@ -33,6 +33,8 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
   const isInitialLoadRef = useRef(true);
   const contentModifiedRef = useRef(false);
   const lastLoadedNodeIdRef = useRef(null);
+  const titleRef = useRef(null);
+
 
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
@@ -48,6 +50,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
     debounce((content, nodeId) => saveContent(content, nodeId), 1000),
     [saveContent]
   );
+
 
   const immediateSaveContent = useCallback((content, nodeId) => {
     if (nodeId) {
@@ -213,38 +216,22 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
     };
   }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill, confirmLeave]);
 
+  useEffect(() => {
+    if (selectedNode && titleRef.current) {
+      titleRef.current.textContent = selectedNode.name || '';
+    }
+  }, [selectedNode]);
 
-  const handleTitleChange = (e) => {
-    const newTitle = e.target.textContent;
-  
-    // Save the current selection range
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    const startOffset = range.startOffset;
-  
-    setTitle((prevTitle) => {
-      // Only update if the title actually changed
-      if (prevTitle !== newTitle) {
-        if (selectedNode) {
-          updateNodeProperty(selectedNode.id, 'name', newTitle);
-        }
+  const handleTitleChange = () => {
+    if (titleRef.current && selectedNode) {
+      const newTitle = titleRef.current.textContent;
+      if (newTitle !== selectedNode.name) {
+        updateNodeProperty(selectedNode.id, 'name', newTitle);
       }
-      return newTitle;
-    });
-  
-    // Restore the selection range
-    requestAnimationFrame(() => {
-      const newRange = document.createRange();
-      const textNode = e.target.firstChild;
-  
-      if (textNode) {
-        newRange.setStart(textNode, Math.min(startOffset, textNode.length));
-        newRange.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-      }
-    });
+    }
   };
+
+
   const handleColorChange = useCallback((color) => {
     setSelectedColor(color.hex);
     if (selectedNode) {
@@ -265,6 +252,8 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   if (!selectedNode) return null;
 
+
+
   return (
     <div className={`editor-container ${isOpen ? 'visible' : ''}`}>
       <div className="editor-content">
@@ -273,10 +262,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
             className="editor-title"
             contentEditable
             suppressContentEditableWarning={true}
+            ref={titleRef}
             onInput={handleTitleChange}
-          >
-            {title}
-          </div>
+          />
           <div className="editor-tools">
             {colorOptions.map((color, index) => (
               <div
@@ -323,9 +311,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
             <div ref={editorRef}></div>
           </div>
         </div>
-        <div className="loading-bar" style={{ width: `${loadingProgress}%` }}></div>
+        <div className={`loading-bar ${loadingProgress > 0 ? 'active' : ''}`} style={{ width: `${loadingProgress}%` }}></div>
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -34,7 +34,6 @@
   align-items: center;
   padding: 15px;
   background: #ff6347; /* Retro orange */
-  border-bottom: 4px solid #333;
   height: 60px;
   position: relative;
 }
@@ -145,10 +144,10 @@
   display: flex;
   flex-direction: column;
   background: var(--grid-color); /* Match the grid color */
-  overflow: hidden; /* Hide overflow for the container */
+  overflow: auto;
+
 }
 
-/* Quill editor container style */
 .quill-container {
   flex: 1;
   background: #f0ead6;
@@ -156,6 +155,7 @@
   border: 2px solid #333;
   border-radius: 0;
   box-shadow: none; /* Remove shadow for seamless integration */
+  overflow: auto; 
 }
 
 .ql-toolbar {
@@ -167,6 +167,12 @@
   fill: none;
   stroke: #f0ead6;
 }
+
+.ql-quote {
+  fill: #f0ead6;
+  stroke: #f0ead6 !important; /* Ensure it matches the other icons */
+}
+
 
 .ql-toolbar .ql-fill {
   fill: #f0ead6;
@@ -217,9 +223,13 @@
 
 /* Loading bar styles */
 .loading-bar {
-  height: 5px;
+  height: 0; /* Default height is 0 */
   background: var(--accent-color);
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.loading-bar.active {
+  height: 5px; /* Set height when active */
 }
 
 /* Save Indicator */
