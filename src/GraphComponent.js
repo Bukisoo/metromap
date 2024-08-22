@@ -222,14 +222,14 @@ const GraphComponent = ({
     });
 
     node.append('circle')
-      .attr('r', 15)
+      .attr('r', 10)
       .attr('fill', d => getNodeColor(d))
       .attr('stroke', graphBackground)
       .attr('stroke-width', 2)
       .attr('class', 'node-circle');
 
     node.append('circle')
-      .attr('r', 7)
+      .attr('r', 5)
       .attr('class', 'node-circle')
       .attr('fill', graphBackground);
 
