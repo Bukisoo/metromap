@@ -38,7 +38,6 @@
   position: relative;
 }
 
-/* Editor Title */
 .editor-title {
   flex: 1;
   margin-right: 10px;
@@ -53,6 +52,20 @@
   border: none;
   outline: none; /* Remove focus outline */
   cursor: text;
+
+  /* New properties to handle overflow */
+  white-space: nowrap;      /* Prevent text from wrapping to a new line */
+  overflow-x: scroll;       /* Allow horizontal scrolling */
+  overflow-y: hidden;       /* Hide vertical overflow */
+  text-overflow: ellipsis;  /* Show ellipsis (...) for overflowed text */
+
+  /* Hide scrollbar */
+  scrollbar-width: none;    /* For Firefox */
+  -ms-overflow-style: none; /* For Internet Explorer and Edge */
+}
+
+.editor-title::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
 }
 
 .editor-title[contentEditable="true"]:empty:before {
