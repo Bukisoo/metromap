@@ -46,6 +46,8 @@ body {
   top: 10px; /* Adjust as needed */
   left: 20px; /* Adjust as needed */
   z-index: 100; /* Ensure it stays on top */
+  user-select: none; /* Prevent text selection */
+  pointer-events: none; /* Prevent any interaction */
 }
 
 
@@ -65,22 +67,6 @@ circle.glow {
   pointer-events: none;
 }
 
-.editor-container {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 50%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  overflow: hidden;
-  background: #2a2a2a;
-  color: #e0e0e0;
-  box-shadow: -2px 0 5px rgba(0,0,0,0.3);
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
-}
 
 .editor-container.visible {
   transform: translateX(0);
@@ -134,7 +120,7 @@ textarea {
   top: 50%;
   left: 0;
   transform: translateY(-50%); /* Center vertically */
-  width: 50px; /* Control the width of the accent bar */
+  width: 25px; /* Control the width of the accent bar */
   height: 300px; /* Control the height of the accent bar */
   background-color: var(--accent-color); /* Accent color */
   mix-blend-mode: multiply; /* Blend mode to create a filter-like effect */

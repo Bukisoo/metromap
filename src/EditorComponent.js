@@ -12,7 +12,7 @@ if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
 const rootStyle = getComputedStyle(document.documentElement);
-const colorOptions = [  
+const colorOptions = [
   rootStyle.getPropertyValue('--retro-blue').trim(),
   rootStyle.getPropertyValue('--retro-pink').trim(),
   rootStyle.getPropertyValue('--retro-yellow').trim(),
@@ -65,7 +65,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
           toolbar: [
             [{ 'header': [1, false] }], // Only two options: title (h1) and regular text
             ['bold', 'italic', 'underline'], // Basic formatting options
-            ['link', 'blockquote','code-block','image'], // Links, quotes, code blocks, and images
+            ['link', 'blockquote', 'code-block', 'image'], // Links, quotes, code blocks, and images
             [{ 'list': 'ordered' }, { 'list': 'bullet' }], // Lists (ordered and bullet)
           ],
           syntax: {
@@ -170,13 +170,13 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       }
       quillRef.current.off('text-change', handleTextChange);
       quillRef.current = null;
-  
+
       // Reset flags
       isInitialLoadRef.current = true;
       lastLoadedNodeIdRef.current = null;
     }
   }, [immediateSaveContent, handleTextChange]);
-  
+
 
   const confirmLeave = useCallback((e) => {
     if (saveStatus === 'saving') {
@@ -191,7 +191,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       console.time('initializeQuill');
       initializeQuill();
       console.timeEnd('initializeQuill');
-  
+
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
         console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
         lastLoadedNodeIdRef.current = selectedNode.id;
@@ -200,28 +200,51 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       }
     } else {
       cleanupQuill();
-  
+
       // Reset loading state flags when editor closes
       isInitialLoadRef.current = true;
       lastLoadedNodeIdRef.current = null;
     }
-  
+
     window.addEventListener('beforeunload', confirmLeave);
-  
+
     return () => {
       window.removeEventListener('beforeunload', confirmLeave);
     };
   }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill, confirmLeave]);
-  
+
 
   const handleTitleChange = (e) => {
-    const newTitle = e.target.value;
-    setTitle(newTitle);
-    if (selectedNode) {
-      updateNodeProperty(selectedNode.id, 'name', newTitle);
-    }
+    const newTitle = e.target.textContent;
+  
+    // Save the current selection range
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    const startOffset = range.startOffset;
+  
+    setTitle((prevTitle) => {
+      // Only update if the title actually changed
+      if (prevTitle !== newTitle) {
+        if (selectedNode) {
+          updateNodeProperty(selectedNode.id, 'name', newTitle);
+        }
+      }
+      return newTitle;
+    });
+  
+    // Restore the selection range
+    requestAnimationFrame(() => {
+      const newRange = document.createRange();
+      const textNode = e.target.firstChild;
+  
+      if (textNode) {
+        newRange.setStart(textNode, Math.min(startOffset, textNode.length));
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      }
+    });
   };
-
   const handleColorChange = useCallback((color) => {
     setSelectedColor(color.hex);
     if (selectedNode) {
@@ -246,13 +269,14 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
     <div className={`editor-container ${isOpen ? 'visible' : ''}`}>
       <div className="editor-content">
         <div className="editor-header">
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Enter node title..."
+          <div
             className="editor-title"
-          />
+            contentEditable
+            suppressContentEditableWarning={true}
+            onInput={handleTitleChange}
+          >
+            {title}
+          </div>
           <div className="editor-tools">
             {colorOptions.map((color, index) => (
               <div

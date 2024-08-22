@@ -7,8 +7,9 @@
   top: 0;
   width: 50%;
   height: 100%;
-  background: var(--editor-background);
-  color: #fff;
+  background: #f0ead6;
+  color: #333;
+  border-left: 4px solid #ff6347; /* Retro orange border */
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
@@ -31,36 +32,89 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  background: #444;
+  padding: 15px;
+  background: #ff6347; /* Retro orange */
+  border-bottom: 4px solid #333;
+  height: 60px;
+  position: relative;
 }
 
+/* Editor Title */
 .editor-title {
   flex: 1;
-  padding: 5px;
   margin-right: 10px;
-  background: #222;
-  border: 1px solid #555;
-  color: #fff;
-}
-
-.editor-tools {
+  color: #f0ead6;
+  font-size: 36px;
+  font-weight: 800;
+  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
   display: flex;
   align-items: center;
+  padding: 0;
+  background: transparent; /* Make it look like plain text */
+  border: none;
+  outline: none; /* Remove focus outline */
+  cursor: text;
+}
+
+.editor-title[contentEditable="true"]:empty:before {
+  content: attr(placeholder);
+  color: #999;
+}
+
+.editor-title:focus {
+  outline: none; /* Remove outline on focus */
+}
+
+/* Toolbar background */
+.editor-tools {
+  background: #ff6347; /* Changed from #333 to match the header */
+  padding: 10px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Align items to the right */
+
 }
 
 /* Color Pastilles */
 .color-pastille {
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
   margin-right: 5px;
+  border: 2px solid #f0ead6;
   cursor: pointer;
   transition: transform 0.2s ease;
+  background-color: var(--accent-color); /* Accent color */
 }
 
+/* Hover effect for color pastille */
 .color-pastille:hover {
   transform: scale(1.2);
+}
+
+/* Styling for buttons to match the map */
+.detach-node-button, .save-indicator {
+  background: #333;
+  color: #f0ead6;
+  margin-left: 10px;
+  font-weight: 800;
+  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
+  text-transform: uppercase;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 0;
+  transition: background 0.2s ease;
+}
+
+/* Hover effect for buttons */
+.detach-node-button:hover, .save-indicator:hover {
+  background: #555;
+}
+
+.detach-node-button, .save-indicator {
+  min-width: 120px; /* Adjust this value as needed */
+  text-align: center;
 }
 
 .color-pastille.custom-color {
@@ -90,23 +144,65 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #fff; /* Ensure the editor background is white */
+  background: var(--grid-color); /* Match the grid color */
   overflow: hidden; /* Hide overflow for the container */
 }
 
+/* Quill editor container style */
 .quill-container {
   flex: 1;
-  background: #fff;
-  color: #000;
-  border-radius: 5px;
-  overflow: auto; /* Enable scroll bar on overflow */
-  padding: 10px;
-  height: 100%; /* Ensure it takes full height */
+  background: #f0ead6;
+  color: var(--graph-textcolor); /* Use --graph-textcolor for text color */
+  border: 2px solid #333;
+  border-radius: 0;
+  box-shadow: none; /* Remove shadow for seamless integration */
+}
+
+.ql-toolbar {
+  background: #333;
+  border-bottom: 2px solid #ff6347;
+}
+
+.ql-toolbar .ql-stroke {
+  fill: none;
+  stroke: #f0ead6;
+}
+
+.ql-toolbar .ql-fill {
+  fill: #f0ead6;
+  stroke: none;
+}
+
+.ql-toolbar .ql-picker {
+  color: #f0ead6;
+}
+
+.ql-toolbar.ql-snow {
+  border: none;
+}
+
+.ql-toolbar button {
+  color: #f0ead6 !important;
+}
+
+/* Custom Scrollbar */
+.quill-container::-webkit-scrollbar {
+  width: 12px;
+}
+
+.quill-container::-webkit-scrollbar-track {
+  background: #333;
+}
+
+.quill-container::-webkit-scrollbar-thumb {
+  background-color: #ff6347;
+  border: 3px solid #333;
 }
 
 .ql-container {
   font-size: 14px;
   height: calc(100% - 42px); /* Adjust to ensure it fits within the editor body */
+  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
 }
 
 .loading-indicator {
@@ -121,32 +217,37 @@
 
 /* Loading bar styles */
 .loading-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
   height: 5px;
-  background: var(--save-indicator-saved);
+  background: var(--accent-color);
   transition: width 0.3s ease;
 }
 
 /* Save Indicator */
 .save-indicator {
+  background: #333;
+  color: #f0ead6;
+  border-radius: 0;
+  font-size: 14px;
+  padding: 7px 15px;
   margin-left: 10px;
-  padding: 5px 10px;
-  background: var(--save-indicator-loading);
-  color: #fff;
-  border-radius: 3px;
-  font-size: 12px;
+}
+
+.save-indicator.loading {
+  background: #D2691E; /* Chocolate - a richer brown with more vibrancy */
+  color: #FFD700; /* Gold - bright and eye-catching */
 }
 
 .save-indicator.saving {
-  background: var(--save-indicator-saving);
+  background: #FF8C00; /* Dark Orange - vibrant and warm */
+  color: #FFFFFF; /* White - for clear contrast */
 }
 
 .save-indicator.saved {
-  background: var(--save-indicator-saved);
+  background: #228B22; /* Forest Green - a vivid, lush green */
+  color: #F5FFFA; /* Mint Cream - soft but high contrast */
 }
 
 .save-indicator.error {
-  background: #ff0000;
+  background: #B22222; /* Firebrick - a bold, intense red */
+  color: #FFFAFA; /* Snow - soft but bright for readability */
 }
