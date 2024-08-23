@@ -7,9 +7,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 
+
 const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
 const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M 3 -5 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13 M -8 15 L -10 -10 L 10 -10 L 8 15 Z";
 const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
+const minimalistDiskIconPath = "M2 2 L18 2 L18 18 L2 18 Z M4 4 L16 4 L16 16 L4 16 Z M6 12 L10 12 L10 16 L6 16 Z";
+
 
 const rootStyle = getComputedStyle(document.documentElement);
 
@@ -145,7 +148,7 @@ const GraphComponent = ({
 
     const zoomGroup = svg.append('g')
       .attr('class', 'zoom-group')
-      .attr('transform', zoomRef.current);
+      .attr('transform', zoomRef.current)
 
     const zoom = d3.zoom()
       .scaleExtent([0.1, 4])
@@ -241,8 +244,8 @@ const GraphComponent = ({
         .attr('text-anchor', 'start')
         .attr('dominant-baseline', 'central')
         .attr('transform', 'rotate(-45)')
-        .attr('x', 15)
-        .attr('y', -20)
+        .attr('x', 10)
+        .attr('y', -15)
         .attr('font-weight', 'bold')
         .style('user-select', 'none')
         .style('fill', graphTextcolor)
@@ -255,8 +258,8 @@ const GraphComponent = ({
       const diagonal = Math.sqrt(bbox.width * bbox.width + bbox.height * bbox.height);
 
       g.insert('rect', 'text')
-        .attr('x', 10)
-        .attr('y', -30)
+        .attr('x', 7)
+        .attr('y', -25)
         .attr('width', diagonal + 5)
         .attr('height', 20)
         .attr('transform', 'rotate(-45)')
@@ -320,6 +323,41 @@ const GraphComponent = ({
       .attr('height', 75);
 
     ReactDOM.render(<RetroButton iconPath={undoIconPath} onClick={undoAction} />, undoButton.node());
+
+    // Function to calculate the size of local storage in bytes
+    const calculateLocalStorageSize = () => {
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          const value = localStorage.getItem(key);
+          // Calculate the size of the key-value pair
+          totalSize += key.length + (value ? value.length : 0);
+        }
+      }
+      return totalSize;
+    };
+
+    // Convert bytes to megabytes
+    const bytesToMB = (bytes) => bytes / (1024 * 1024);
+
+    // Calculate the percentage of local storage used
+    const storageSizeInMB = bytesToMB(calculateLocalStorageSize());
+    let storageUsage = (storageSizeInMB / 5) * 100; // Assuming 5MB is the upper bound
+
+    // Create the storage button
+    const storageButton = svg.append('g')
+      .attr('class', 'icon-circle storage-button')
+      .attr('transform', `translate(${firstButtonX + 3 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
+      .append('foreignObject')
+      .attr('width', 75)
+      .attr('height', 75);
+
+    // Render the RetroButton with the calculated percentage
+    ReactDOM.render(<RetroButton percentage={storageUsage} onClick={() => { /* handle click */ }} />, storageButton.node());
+
+
+
+
 
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
@@ -634,6 +672,47 @@ const GraphComponent = ({
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
+
+  const drawRiver = (svg, nodes, width, height) => {
+    const riverPathData = generateRandomRiverPath(nodes, width, height);
+
+    svg.append('path')
+      .attr('d', riverPathData)
+      .attr('stroke', '#1E90FF') // River color (DodgerBlue)
+      .attr('stroke-width', 20)
+      .attr('fill', 'none')
+      .attr('opacity', 0.5);
+  };
+
+
+  const generateRandomRiverPath = (nodes, width, height) => {
+    const riverPath = [];
+    const numberOfSegments = Math.floor(Math.random() * 5) + 3; // Random segments between 3 and 7
+
+    let x = Math.random() * width * 0.2;  // Start near the left edge
+    let y = Math.random() * height;  // Random vertical start
+
+    for (let i = 0; i < numberOfSegments; i++) {
+      // Move to the right and up/down with a 45° bend
+      const directionX = Math.random() > 0.5 ? 1 : -1;
+      const directionY = Math.random() > 0.5 ? 1 : -1;
+
+      const segmentLengthX = Math.random() * width * 0.2;
+      const segmentLengthY = segmentLengthX * directionY;
+
+      x = Math.min(Math.max(x + segmentLengthX * directionX, 0), width);
+      y = Math.min(Math.max(y + segmentLengthY, 0), height);
+
+      riverPath.push([x, y]);
+    }
+
+    // Smooth the river path using D3 line generator
+    const lineGenerator = d3.line().curve(d3.curveBasis);
+    const pathData = lineGenerator(riverPath);
+
+    return pathData;
+  };
+
 
   return <svg ref={svgRef}></svg>;
 };
