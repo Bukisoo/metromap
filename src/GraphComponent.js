@@ -273,21 +273,21 @@ const GraphComponent = ({
       if (d.children && d.children.length > 0) {
         d3.select(this).append('g')
           .attr('class', 'icon-circle eye-button')
-          .attr('transform', 'translate(20, -20)')
+          .attr('transform', 'translate(16, -10)')
           .on('click', (event, d) => {
             event.stopPropagation();
             toggleChildrenVisibility(d);
           })
           .each(function (d) {
-            d3.select(this).append('circle').attr('r', 10);
+            d3.select(this).append('circle').attr('r', 7);
             const icon = d.childrenHidden ? faEyeSlash : faEye;
             d3.select(this).append(() => {
               const iconElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
               ReactDOM.render(<FontAwesomeIcon icon={icon} />, iconElement);
-              iconElement.setAttribute('width', '12');
-              iconElement.setAttribute('height', '12');
-              iconElement.setAttribute('x', '-6');
-              iconElement.setAttribute('y', '-6');
+              iconElement.setAttribute('width', '10');
+              iconElement.setAttribute('height', '10');
+              iconElement.setAttribute('x', '-5');
+              iconElement.setAttribute('y', '-5');
               return iconElement;
             });
           });
