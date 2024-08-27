@@ -12,6 +12,7 @@
     "d3": "^7.9.0",
     "dompurify": "^3.1.6",
     "draft-js": "^0.11.7",
+    "gapi": "^0.0.3",
     "gapi-script": "^1.2.0",
     "highlight.js": "^11.10.0",
     "react": "^18.3.1",
@@ -23,7 +24,7 @@
     "yarn": "^1.22.22"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env HTTPS=true SSL_CRT_FILE=./server.crt SSL_KEY_FILE=./server.key react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -45,5 +46,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }

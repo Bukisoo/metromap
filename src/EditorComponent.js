@@ -38,11 +38,20 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
-      console.log(`Saving content for node: ${nodeId}`);
+      //console.log(`Saving content for node: ${nodeId}`);
       setSaveStatus('saving');
-      updateNodeProperty(nodeId, 'notes', content);
-      console.log(`Content saved for node: ${nodeId}`);
-      setSaveStatus('saved');
+      
+      // Define success and error callbacks
+      const onSuccess = () => {
+        //console.log(`Content saved for node: ${nodeId}`);
+        setSaveStatus('saved');
+      };
+
+      const onError = () => {
+        setSaveStatus('error');
+      };
+
+      updateNodeProperty(nodeId, 'notes', content, onSuccess, onError);
     }
   }, [updateNodeProperty, isLoading]);
 
@@ -61,7 +70,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   const initializeQuill = useCallback(() => {
     if (editorRef.current && !quillRef.current) {
-      console.log("Initializing Quill editor");
+      //console.log("Initializing Quill editor");
       quillRef.current = new Quill(editorRef.current, {
         theme: 'snow',
         modules: {
@@ -76,7 +85,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
           },
         }
       });
-      console.log("Quill editor initialized");
+      //console.log("Quill editor initialized");
 
       quillRef.current.on('text-change', handleTextChange);
     }
@@ -86,7 +95,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
     if (!isLoading && !isInitialLoadRef.current) {
       contentModifiedRef.current = true;
       const content = quillRef.current.root.innerHTML;
-      console.log(`Text changed with content length: ${content.length}`);
+      //console.log(`Text changed with content length: ${content.length}`);
       setSaveStatus('saving');
       debouncedSaveContent(content, lastLoadedNodeIdRef.current);
     }
@@ -102,9 +111,9 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       // Sanitize content using DOMPurify before loading it into the editor
       const sanitizedContent = DOMPurify.sanitize(content);
 
-      console.time('directInsertHTML');
+      //console.time('directInsertHTML');
       quillRef.current.root.innerHTML = sanitizedContent; // Directly set the sanitized HTML content
-      console.timeEnd('directInsertHTML');
+      //console.timeEnd('directInsertHTML');
 
       setLoadingProgress(100);
       setTimeout(() => {
@@ -114,7 +123,8 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
       }, 2000);
 
       console.log("Content loaded");
-
+      setSaveStatus('saved');
+      
       requestAnimationFrame(() => {
         formatContentInQuill();
         isInitialLoadRef.current = false;
@@ -126,20 +136,20 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   const formatContentInQuill = useCallback(() => {
     if (quillRef.current) {
-      console.time('formatContentInQuill');
+      //console.time('formatContentInQuill');
       const codeBlocks = quillRef.current.root.querySelectorAll('pre');
-      console.log(`Found ${codeBlocks.length} code blocks`);
+      //console.log(`Found ${codeBlocks.length} code blocks`);
 
       codeBlocks.forEach((block, index) => {
         requestAnimationFrame(() => {
-          console.time(`highlightBlock${index}`);
+          //console.time(`highlightBlock${index}`);
           block.innerHTML = hljs.highlightAuto(block.innerText).value;
-          console.timeEnd(`highlightBlock${index}`);
+          //console.timeEnd(`highlightBlock${index}`);
         });
       });
 
-      console.log("Formatting and syntax highlighting applied");
-      console.timeEnd('formatContentInQuill');
+      //console.log("Formatting and syntax highlighting applied");
+      //console.timeEnd('formatContentInQuill');
     }
   }, []);
 
@@ -166,7 +176,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   const cleanupQuill = useCallback(() => {
     if (quillRef.current) {
-      console.log("Cleaning up Quill on close");
+      //console.log("Cleaning up Quill on close");
       const content = quillRef.current.root.innerHTML;
       if (contentModifiedRef.current && content !== '<p><br></p>' && content.trim() !== '') {
         immediateSaveContent(content, lastLoadedNodeIdRef.current);
@@ -191,12 +201,12 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   useEffect(() => {
     if (isOpen) {
-      console.time('initializeQuill');
+      //console.time('initializeQuill');
       initializeQuill();
-      console.timeEnd('initializeQuill');
+      //console.timeEnd('initializeQuill');
 
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
-        console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
+        //console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
         lastLoadedNodeIdRef.current = selectedNode.id;
         setTitle(selectedNode.name || '');
         loadContent(selectedNode.notes || '');

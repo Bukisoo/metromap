@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import ReactDOM from 'react-dom';
 import RetroButton from './RetroButton';
-import { fetchStations } from './fetchStations';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-
+import { createRoot } from 'react-dom/client';
+import { fetchStations, getGeolocation } from './fetchStations';
 
 
 const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
@@ -38,7 +38,6 @@ const GraphComponent = ({
   setStations,
   usedColors,
   setUsedColors,
-  updateHistory,
   undoAction,
   updateGraph
 }) => {
@@ -280,14 +279,21 @@ const GraphComponent = ({
           })
           .each(function (d) {
             d3.select(this).append('circle').attr('r', 7);
+            
             const icon = d.childrenHidden ? faEyeSlash : faEye;
+    
             d3.select(this).append(() => {
               const iconElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-              ReactDOM.render(<FontAwesomeIcon icon={icon} />, iconElement);
+              
+              // Create a new root and render the FontAwesomeIcon component
+              const root = createRoot(iconElement);
+              root.render(<FontAwesomeIcon icon={icon} />);
+              
               iconElement.setAttribute('width', '10');
               iconElement.setAttribute('height', '10');
               iconElement.setAttribute('x', '-5');
               iconElement.setAttribute('y', '-5');
+              
               return iconElement;
             });
           });
@@ -304,7 +310,8 @@ const GraphComponent = ({
       .attr('width', 75)
       .attr('height', 75);
 
-    ReactDOM.render(<RetroButton iconPath={addIconPath} onClick={addNode} />, addButton.node());
+      const addButtonRoot = createRoot(addButton.node());
+      addButtonRoot.render(<RetroButton iconPath={addIconPath} onClick={addNode} />);
 
     const binButton = svg.append('g')
       .attr('class', 'icon-circle bin-button no-hover-glow')
@@ -313,7 +320,8 @@ const GraphComponent = ({
       .attr('width', 75)
       .attr('height', 75);
 
-    ReactDOM.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />, binButton.node());
+      const binButtonRoot = createRoot(binButton.node());
+      binButtonRoot.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />);
 
     const undoButton = svg.append('g')
       .attr('class', 'icon-circle undo-button')
@@ -322,42 +330,8 @@ const GraphComponent = ({
       .attr('width', 75)
       .attr('height', 75);
 
-    ReactDOM.render(<RetroButton iconPath={undoIconPath} onClick={undoAction} />, undoButton.node());
-
-    // Function to calculate the size of local storage in bytes
-    const calculateLocalStorageSize = () => {
-      let totalSize = 0;
-      for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
-          const value = localStorage.getItem(key);
-          // Calculate the size of the key-value pair
-          totalSize += key.length + (value ? value.length : 0);
-        }
-      }
-      return totalSize;
-    };
-
-    // Convert bytes to megabytes
-    const bytesToMB = (bytes) => bytes / (1024 * 1024);
-
-    // Calculate the percentage of local storage used
-    const storageSizeInMB = bytesToMB(calculateLocalStorageSize());
-    let storageUsage = (storageSizeInMB / 5) * 100; // Assuming 5MB is the upper bound
-
-    // Create the storage button
-    const storageButton = svg.append('g')
-      .attr('class', 'icon-circle storage-button')
-      .attr('transform', `translate(${firstButtonX + 3 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
-
-    // Render the RetroButton with the calculated percentage
-    ReactDOM.render(<RetroButton percentage={storageUsage} onClick={() => { /* handle click */ }} />, storageButton.node());
-
-
-
-
+      const undoButtonRoot = createRoot(undoButton.node());
+      undoButtonRoot.render(<RetroButton iconPath={undoIconPath} onClick={undoAction} />);
 
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
@@ -496,23 +470,29 @@ const GraphComponent = ({
 
   const addNode = async () => {
     const currentZoom = zoomRef.current;
-
-    let randomStation = "New Node";
-    if (stations.length > 0) {
-      randomStation = stations[Math.floor(Math.random() * stations.length)];
-    } else {
-      // Fetch new stations if none are available
+    let newStationName = "New Node";
+    let availableStations = stations; // Start with the existing stations
+  
+    if (stations.length === 0) {
       const { latitude, longitude } = await getGeolocation();
       const fetchedStations = await fetchStations(latitude, longitude);
-      setStations(fetchedStations);
-      randomStation = fetchedStations.length > 0 ? fetchedStations[Math.floor(Math.random() * fetchedStations.length)] : "New Node";
+      availableStations = fetchedStations; // Use fetched stations directly
+      setStations(fetchedStations); // Update state with fetched stations
     }
-
+  
+    // Ensure the name is unique
+    const usedNames = new Set(flattenNodes(nodes).map(node => node.name));
+    availableStations = availableStations.filter(station => !usedNames.has(station));
+  
+    if (availableStations.length > 0) {
+      newStationName = availableStations[0];
+    }
+  
     const width = 10000;
     const height = 10000;
     const newNode = {
       id: `node-${Date.now()}`,
-      name: randomStation,
+      name: newStationName,
       color: accentColor,
       notes: '',
       children: [],
@@ -520,24 +500,24 @@ const GraphComponent = ({
       y: height / 2,
       childrenHidden: false
     };
-
+  
     setNodes(prevNodes => {
       const updatedNodes = [...prevNodes, newNode];
       updateGraph(updatedNodes);
-      updateHistory(updatedNodes);
       return updatedNodes;
     });
-
+  
     if (simulationRef.current) {
       const simulation = simulationRef.current;
       simulation.nodes(flattenNodes([...nodes, newNode]));
       simulation.alpha(1).restart();
     }
-
+  
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
-
+  
+  
   // Helper function to get geolocation
   const getGeolocation = () => {
     return new Promise((resolve, reject) => {
@@ -566,13 +546,21 @@ const GraphComponent = ({
         return true;
       });
     };
+  
     setNodes(prevNodes => {
       const updatedNodes = removeNodeAndChildren(prevNodes);
+      
+      // If the editor is open, close it when any node is deleted
+      if (isEditorVisible) {
+        setIsEditorVisible(false);
+        setSelectedNode(null);
+      }
+      
       updateGraph(updatedNodes);
-      updateHistory(updatedNodes);
       return updatedNodes;
     });
   };
+  
 
   const toggleChildrenVisibility = (node) => {
     const toggleHidden = (nodes) => {
@@ -664,7 +652,6 @@ const GraphComponent = ({
 
       const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
       updateGraph(finalNodes);
-      updateHistory(finalNodes);
       return finalNodes;
     });
 

@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 import { gapi } from 'gapi-script';
 
-const CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
-const API_KEY = 'YOUR_API_KEY';
+
+const FILE_NAME = 'MetroMapData.json';
+const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
+const API_KEY = process.env.REACT_APP_API_KEY;
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 const LandingPage = ({ onLoginSuccess }) => {
