@@ -139,21 +139,21 @@ const loadGraph = async () => {
 
 let saveTimeout;
 
-const saveGraph = async (graph, fileId = null) => {
-  // Clear any previous save timeout
+const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) => {
   if (saveTimeout) {
     clearTimeout(saveTimeout);
   }
 
-  // Debounce save function by delaying the actual save operation
+  setSaveStatus('saving');
+
   saveTimeout = setTimeout(async () => {
     try {
       if (!gapi.client || !gapi.client.drive) {
         console.error("Google Drive API client not initialized.");
+        setSaveStatus('error');
         return;
       }
 
-      // If fileId is not provided, look for an existing file first
       if (!fileId) {
         const response = await gapi.client.drive.files.list({
           q: `name='${FILE_NAME}' and trashed=false`,
@@ -192,16 +192,23 @@ const saveGraph = async (graph, fileId = null) => {
         body: multipartRequestBody,
       });
 
+      setSaveStatus('saved');
       console.log("Graph saved to Google Drive.");
+
+      // Call the onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Error saving graph to Google Drive:", error);
+      setSaveStatus('error');
     }
-  }, 1000); // Delay the save by 1 second
+  }, 1000);
 };
 
-const saveNodeNote = async (id, newNote, nodes, setNodes, onSuccess, onError) => {
+
+const saveNodeNote = async (id, newNote, nodes, setNodes, setSaveStatus, onSuccess, onError) => {
   try {
-    // Update the notes in the current graph state
     const updateNoteInNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
@@ -214,18 +221,17 @@ const saveNodeNote = async (id, newNote, nodes, setNodes, onSuccess, onError) =>
     };
 
     const updatedNodes = updateNoteInNodes(nodes);
-    setNodes(updatedNodes); // Update the state with the new notes
+    setNodes(updatedNodes);
 
-    // Save the updated graph to Google Drive
-    await saveGraph(updatedNodes);
+    await saveGraph(updatedNodes, setSaveStatus, null, onSuccess);
 
-    console.log("Note updated and saved to Google Drive.");
-    if (onSuccess) onSuccess(); // Trigger success callback
+    console.log("Note update initiated for saving to Google Drive.");
   } catch (error) {
     console.error("Error saving note to Google Drive:", error);
-    if (onError) onError(); // Trigger error callback
+    if (onError) onError();
   }
 };
+
 
 const App = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -239,6 +245,7 @@ const App = () => {
   const [usedColors, setUsedColors] = useState([]);
   const undoStack = useRef([]); // For storing undo actions
   const maxUndoActions = 10; // Limit to the last 10 actions
+  const [saveStatus, setSaveStatus] = useState('saved');
 
   // Initialize Google API client
   useEffect(() => {
@@ -314,14 +321,14 @@ const App = () => {
     }
   };
   
-  
-
   const updateGraph = (newNodes) => {
     setNodes(newNodes);
-    saveGraph(newNodes);
+    saveGraph(newNodes, setSaveStatus); // Ensure setSaveStatus is passed here
   };
 
   const handleDetachNode = (nodeId) => {
+    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Clone the current state of nodes
+  
     const detachNode = (nodes) => {
       let nodeToDetach = null;
       const updatedNodes = nodes.map(node => {
@@ -333,26 +340,36 @@ const App = () => {
             }
             return true;
           });
-
+  
           return { ...node, children: filteredChildren };
         }
         return node;
       });
-
+  
       if (nodeToDetach) {
-        nodeToDetach.color = '#e0e0e0';
         updatedNodes.push(nodeToDetach); // Add it to the top-level nodes
       }
       return updatedNodes;
     };
-
+  
     const updatedNodes = detachNode(nodes);
+  
+    // Push to undo stack
+    undoStack.current.push({
+      type: 'detach_node',
+      previousState: oldNodes, // Save the old state
+      newState: updatedNodes,  // Save the new state
+    });
+  
+    // Update nodes state
     setNodes(updatedNodes);
-    updateGraph(updatedNodes); // Mark as a significant change
+  
+    // Save the updated graph
+    saveGraph(updatedNodes, setSaveStatus);
   };
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
-    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Clone the current state of nodes
+    const oldNodes = JSON.parse(JSON.stringify(nodes));
   
     const updateNodes = (nodes) => {
       return nodes.map(node => {
@@ -371,23 +388,18 @@ const App = () => {
   
     const updatedNodes = updateNodes(nodes);
   
-    // Debugging: Ensure the stack is being populated
-    console.log('Pushing to undoStack:', undoStack.current);
-    
     undoStack.current.push({
       type: 'update_node',
-      previousState: oldNodes, // Save the old state
-      newState: updatedNodes,  // Save the new state (if needed)
+      previousState: oldNodes,
+      newState: updatedNodes,
     });
-  
-    console.log('After push:', undoStack.current);
   
     setNodes(updatedNodes);
   
     if (property === 'notes') {
-      saveNodeNote(id, value, nodes, setNodes, onSuccess, onError);
+      saveNodeNote(id, value, nodes, setNodes, setSaveStatus, onSuccess, onError);
     } else {
-      saveGraph(updatedNodes);
+      saveGraph(updatedNodes, setSaveStatus);
     }
   
     if (selectedNode && selectedNode.id === id) {
@@ -398,7 +410,7 @@ const App = () => {
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
-  }; 
+  };  
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
@@ -447,8 +459,10 @@ const App = () => {
           </div>
           <EditorComponent
             selectedNode={selectedNode}
-            handleDetachNode={handleDetachNode} // Pass the handleDetachNode function
+            handleDetachNode={handleDetachNode}
             updateNodeProperty={updateNodeProperty}
+            saveStatus={saveStatus}
+            setSaveStatus={setSaveStatus} 
             isOpen={isEditorVisible}
             setIsOpen={setIsEditorVisible}
           />

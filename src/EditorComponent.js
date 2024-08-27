@@ -36,11 +36,12 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
   const titleRef = useRef(null);
 
 
+
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
       //console.log(`Saving content for node: ${nodeId}`);
       setSaveStatus('saving');
-      
+
       // Define success and error callbacks
       const onSuccess = () => {
         //console.log(`Content saved for node: ${nodeId}`);
@@ -124,7 +125,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
       console.log("Content loaded");
       setSaveStatus('saved');
-      
+
       requestAnimationFrame(() => {
         formatContentInQuill();
         isInitialLoadRef.current = false;
@@ -193,7 +194,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   const confirmLeave = useCallback((e) => {
     if (saveStatus === 'saving') {
-      const confirmationMessage = 'You have unsaved changes. Are you sure you want to leave?';
+      const confirmationMessage = 'Your changes are still saving. Are you sure you want to close?';
       e.returnValue = confirmationMessage; // Standard for most browsers
       return confirmationMessage; // For some browsers
     }
@@ -201,28 +202,25 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
 
   useEffect(() => {
     if (isOpen) {
-      //console.time('initializeQuill');
       initializeQuill();
-      //console.timeEnd('initializeQuill');
 
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
-        //console.log(`Node selected: ${selectedNode.id} with notes length: ${selectedNode.notes.length}`);
         lastLoadedNodeIdRef.current = selectedNode.id;
         setTitle(selectedNode.name || '');
         loadContent(selectedNode.notes || '');
       }
     } else {
       cleanupQuill();
-
-      // Reset loading state flags when editor closes
       isInitialLoadRef.current = true;
       lastLoadedNodeIdRef.current = null;
     }
 
     window.addEventListener('beforeunload', confirmLeave);
+    window.addEventListener('close', confirmLeave);  // This adds the warning when the editor is closed
 
     return () => {
       window.removeEventListener('beforeunload', confirmLeave);
+      window.removeEventListener('close', confirmLeave);  // Cleanup on component unmount
     };
   }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill, confirmLeave]);
 
@@ -302,7 +300,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
               className="detach-node-button"
               onClick={() => {
                 if (selectedNode) {
-                  handleDetachNode(selectedNode.id);
+                  handleDetachNode(selectedNode.id); // Call the function here
                 }
               }}
             >

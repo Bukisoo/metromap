@@ -473,25 +473,25 @@ const GraphComponent = ({
 
   const addNode = async () => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
-  
+
     const currentZoom = zoomRef.current;
     let newStationName = "New Node";
     let availableStations = stations;
-  
+
     if (stations.length === 0) {
       const { latitude, longitude } = await getGeolocation();
       const fetchedStations = await fetchStations(latitude, longitude);
       availableStations = fetchedStations;
       setStations(fetchedStations);
     }
-  
+
     const usedNames = new Set(flattenNodes(nodes).map(node => node.name));
     availableStations = availableStations.filter(station => !usedNames.has(station));
-  
+
     if (availableStations.length > 0) {
       newStationName = availableStations[0];
     }
-  
+
     const width = 10000;
     const height = 10000;
     const newNode = {
@@ -504,30 +504,30 @@ const GraphComponent = ({
       y: height / 2,
       childrenHidden: false
     };
-  
+
     setNodes(prevNodes => {
       const updatedNodes = [...prevNodes, newNode];
-      
+
       undoStack.current.push({
         type: 'add_node',
         previousState: oldNodes,
         newState: updatedNodes,
       });
-  
+
       updateGraph(updatedNodes);
       return updatedNodes;
     });
-  
+
     if (simulationRef.current) {
       const simulation = simulationRef.current;
       simulation.nodes(flattenNodes([...nodes, newNode]));
       simulation.alpha(1).restart();
     }
-  
+
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
-  
+
 
 
   // Helper function to get geolocation
@@ -548,7 +548,7 @@ const GraphComponent = ({
 
   const removeNode = (nodeToRemove) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes)); // Save current state
-  
+
     const removeNodeAndChildren = (nodes) => {
       return nodes.filter(node => {
         if (node.id === nodeToRemove.id) {
@@ -560,21 +560,21 @@ const GraphComponent = ({
         return true;
       });
     };
-  
+
     setNodes(prevNodes => {
       const updatedNodes = removeNodeAndChildren(prevNodes);
-  
+
       undoStack.current.push({
         type: 'remove_node',
         previousState: oldNodes,
         newState: updatedNodes,
       });
-  
+
       if (isEditorVisible) {
         setIsEditorVisible(false);
         setSelectedNode(null);
       }
-  
+
       updateGraph(updatedNodes);
       return updatedNodes;
     });
@@ -622,32 +622,28 @@ const GraphComponent = ({
     return node;
   };
 
-  // Modify the connectNodes function similarly to preserve zoom state:
   const connectNodes = (sourceNode, targetNode) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes)); // Save current state
-  
     const currentZoom = zoomRef.current;
-  
+
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
-  
-    const isDescendant = (parent, child) => {
-      if (parent.id === child.id) return true;
-      for (let node of parent.children || []) {
-        if (isDescendant(node, child)) return true;
-      }
-      return false;
-    };
-  
+
+    // Check if connecting these nodes would create a cycle
+    if (createsCycle(sourceNode, targetNode, nodes)) {
+      alert('This connection would create a circular relationship and is not allowed.');
+      return;
+    }
+
     const removeNodeFromParent = (nodes, nodeToRemove) => {
       return nodes.map(node => ({
         ...node,
         children: (node.children || []).filter(child => child.id !== nodeToRemove.id).map(child => removeNodeFromParent([child], nodeToRemove)[0])
       }));
     };
-  
+
     const addNodeToNewParent = (nodes, sourceNode, targetNode) => {
       return nodes.map(node => {
-        if (node.id === targetNode.id && !isDescendant(sourceNode, node)) {
+        if (node.id === targetNode.id) {
           const newColor = getNodeColor(targetNode) === accentColor ? getNextColor(usedColors) : getNodeColor(targetNode);
           const originalColor = getNodeColor(sourceNode);
           sourceNode = updateNodeAndChildrenColors(sourceNode, newColor, originalColor);
@@ -664,36 +660,78 @@ const GraphComponent = ({
         return node;
       });
     };
-  
+
     setNodes(prevNodes => {
       let updatedNodes = removeNodeFromParent(prevNodes, sourceNode);
       updatedNodes = addNodeToNewParent(updatedNodes, sourceNode, targetNode);
       const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
-      
+
       undoStack.current.push({
         type: 'connect_nodes',
         previousState: oldNodes,
         newState: finalNodes,
       });
-  
+
       updateGraph(finalNodes);
       return finalNodes;
     });
-  
+
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
-  
 
-  const drawRiver = (svg, nodes, width, height) => {
-    const riverPathData = generateRandomRiverPath(nodes, width, height);
+  const createsCycle = (sourceNode, targetNode, nodes) => {
+    // Temporarily add the edge from sourceNode to targetNode and check for a cycle
+    const adjacencyList = buildAdjacencyList(nodes, sourceNode, targetNode);
+    return hasCycleDFS(adjacencyList, sourceNode.id);
+  };
 
-    svg.append('path')
-      .attr('d', riverPathData)
-      .attr('stroke', '#1E90FF') // River color (DodgerBlue)
-      .attr('stroke-width', 20)
-      .attr('fill', 'none')
-      .attr('opacity', 0.5);
+  // Build an adjacency list for the graph including the new edge
+  const buildAdjacencyList = (nodes, sourceNode, targetNode) => {
+    const adjacencyList = {};
+
+    const traverse = (node, parent = null) => {
+      if (!adjacencyList[node.id]) {
+        adjacencyList[node.id] = [];
+      }
+
+      if (parent) {
+        adjacencyList[parent.id].push(node.id);
+      }
+
+      (node.children || []).forEach(child => traverse(child, node));
+    };
+
+    // Build the adjacency list from the existing nodes
+    nodes.forEach(node => traverse(node));
+
+    // Add the new connection
+    adjacencyList[targetNode.id].push(sourceNode.id);
+
+    return adjacencyList;
+  };
+
+  // Perform DFS to detect if there is a cycle
+  const hasCycleDFS = (adjacencyList, startNode) => {
+    const visited = new Set();
+    const stack = new Set();
+
+    const dfs = (nodeId) => {
+      if (stack.has(nodeId)) return true; // Cycle detected
+      if (visited.has(nodeId)) return false;
+
+      visited.add(nodeId);
+      stack.add(nodeId);
+
+      for (const neighbor of adjacencyList[nodeId]) {
+        if (dfs(neighbor)) return true;
+      }
+
+      stack.delete(nodeId);
+      return false;
+    };
+
+    return dfs(startNode);
   };
 
 
