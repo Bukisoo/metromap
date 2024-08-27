@@ -1,0 +1,62 @@
+@import url('./variables.css');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@800&display=swap');
+
+/* Reuse the variables from variables.css */
+@import url('./variables.css');
+
+/* Main landing page container */
+.landing-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    background-color: var(--graph-background);
+    text-align: center;
+    /* Ensure the text is centered */
+}
+
+/* Title Styling */
+.landing-title {
+    font-family: 'EB Garamond', serif;
+    font-weight: 800;
+    font-size: 48px;
+    /* Adjust the size as needed */
+    color: var(--graph-textcolor);
+    margin-bottom: 20px;
+    /* Space below the title */
+}
+
+/* Retro Button Styling */
+.signin-button {
+    background-color: var(--accent-color);
+    color: var(--graph-background);
+    padding: 12px 24px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-family: 'Monospace', Arial, sans-serif;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    border: none;
+    /* Ensure no border */
+    outline: none;
+    /* Ensure no outline */
+}
+
+.signin-button:hover {
+    background-color: var(--retro-orange);
+    transform: scale(1.05);
+}
+
+.signin-button:active {
+    transform: scale(0.95);
+}
+
+.signin-button:focus {
+    outline: none;
+    /* Ensure no focus outline */
+    box-shadow: 0 0 10px var(--accent-color);
+    /* Optional focus shadow */
+}

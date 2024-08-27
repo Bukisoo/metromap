@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import GraphComponent from './GraphComponent';
 import EditorComponent from './EditorComponent';
 import LandingPage from './LandingPage';
+import LoadingScreen from './LoadingScreen';
 import './App.css';
 import { gapi } from 'gapi-script';
 import { fetchStations, getGeolocation } from './fetchStations';
@@ -241,6 +242,7 @@ const App = () => {
   // Initialize Google API client
   useEffect(() => {
     const initClient = () => {
+  
       gapi.load('client:auth2', () => {
         gapi.client.init({
           apiKey: API_KEY,
@@ -257,6 +259,7 @@ const App = () => {
         });
       });
     };
+
     initClient();
   }, []);
 
@@ -265,36 +268,36 @@ const App = () => {
     const loadAndInitializeGraph = async () => {
       try {
         let fetchedStations = stations;
-  
+
         // Ensure we have station names before proceeding
         if (stations.length === 0) {
           const { latitude, longitude } = await getGeolocation();
           fetchedStations = await fetchStations(latitude, longitude);
           setStations(fetchedStations);
         }
-  
+
         // Load the graph
         let graph = await loadGraph();
-  
+
         // If the graph is empty, initialize it with fetched station names or fallback
         if (graph.length === 0) {
           graph = initialGraph(fetchedStations);
           await saveGraph(graph); // Save only once after initialization
         }
-  
+
         setNodes(graph);
         setIsGraphLoaded(true); // Mark the graph as loaded
       } catch (error) {
         console.error("Error loading and initializing the graph:", error);
       }
     };
-  
+
     if (isSignedIn && isGapiInitialized && !isGraphLoaded) {
-      loadAndInitializeGraph(); // Only call loadGraph if signed in, gapi is initialized, and graph is not already loaded
+      loadAndInitializeGraph(); // Call the function after a delay
     }
   }, [isSignedIn, isGapiInitialized, isGraphLoaded, stations]);
-  
-  
+
+
 
   const updateGraph = (newNodes) => {
     setNodes(newNodes);
@@ -346,26 +349,26 @@ const App = () => {
         return node;
       });
     };
-  
+
     const updatedNodes = updateNodes(nodes);
     setNodes(updatedNodes);
-  
+
     if (property === 'notes') {
       saveNodeNote(id, value, nodes, setNodes, onSuccess, onError); // Pass nodes and setNodes
     } else {
       saveGraph(updatedNodes); // Save the whole graph for other property changes
     }
-  
+
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-  
+
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
   };
-  
+
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
       return nodes.map(n => {
@@ -419,7 +422,7 @@ const App = () => {
           <div className="accent-bar"></div>
         </>
       ) : (
-        <div>Loading your data...</div> // Show a loading message until the graph is loaded
+        <LoadingScreen /> // Show a loading message until the graph is loaded
       )}
     </div>
   );

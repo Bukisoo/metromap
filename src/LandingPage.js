@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { gapi } from 'gapi-script';
-
+import './LandingPage.css';
 
 const FILE_NAME = 'MetroMapData.json';
 const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
@@ -34,9 +34,11 @@ const LandingPage = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div>
-      <h1>Welcome to MetroMap</h1>
-      <button onClick={handleLogin}>Sign in with Google Drive</button>
+    <div className="landing-page">
+      <h1 className="landing-title">Welcome to MetroMap</h1>
+      <button className="signin-button" onClick={handleLogin}>
+        Sign in with Google Drive
+      </button>
     </div>
   );
 };
