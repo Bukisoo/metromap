@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import GraphComponent from './GraphComponent';
 import EditorComponent from './EditorComponent';
 import LandingPage from './LandingPage';
@@ -199,7 +199,6 @@ const saveGraph = async (graph, fileId = null) => {
   }, 1000); // Delay the save by 1 second
 };
 
-
 const saveNodeNote = async (id, newNote, nodes, setNodes, onSuccess, onError) => {
   try {
     // Update the notes in the current graph state
@@ -238,11 +237,12 @@ const App = () => {
   const [isEditorVisible, setIsEditorVisible] = useState(false);
   const [stations, setStations] = useState([]);
   const [usedColors, setUsedColors] = useState([]);
+  const undoStack = useRef([]); // For storing undo actions
+  const maxUndoActions = 10; // Limit to the last 10 actions
 
   // Initialize Google API client
   useEffect(() => {
     const initClient = () => {
-  
       gapi.load('client:auth2', () => {
         gapi.client.init({
           apiKey: API_KEY,
@@ -293,11 +293,28 @@ const App = () => {
     };
 
     if (isSignedIn && isGapiInitialized && !isGraphLoaded) {
-      loadAndInitializeGraph(); // Call the function after a delay
+      loadAndInitializeGraph(); // Only call loadGraph if signed in, gapi is initialized, and graph is not already loaded
     }
   }, [isSignedIn, isGapiInitialized, isGraphLoaded, stations]);
 
-
+  // Handle undo operation
+  const undoAction = () => {
+    if (undoStack.current.length > 0) {
+      const lastAction = undoStack.current.pop();
+      console.log("Last action:", lastAction);
+  
+      if (lastAction.previousState) {
+        // Revert to the previous state
+        setNodes(lastAction.previousState);
+      } else {
+        console.warn("No previous state found for this action.");
+      }
+    } else {
+      console.log("Undo stack is empty.");
+    }
+  };
+  
+  
 
   const updateGraph = (newNodes) => {
     setNodes(newNodes);
@@ -335,6 +352,8 @@ const App = () => {
   };
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
+    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Clone the current state of nodes
+  
     const updateNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
@@ -349,25 +368,37 @@ const App = () => {
         return node;
       });
     };
-
+  
     const updatedNodes = updateNodes(nodes);
+  
+    // Debugging: Ensure the stack is being populated
+    console.log('Pushing to undoStack:', undoStack.current);
+    
+    undoStack.current.push({
+      type: 'update_node',
+      previousState: oldNodes, // Save the old state
+      newState: updatedNodes,  // Save the new state (if needed)
+    });
+  
+    console.log('After push:', undoStack.current);
+  
     setNodes(updatedNodes);
-
+  
     if (property === 'notes') {
-      saveNodeNote(id, value, nodes, setNodes, onSuccess, onError); // Pass nodes and setNodes
+      saveNodeNote(id, value, nodes, setNodes, onSuccess, onError);
     } else {
-      saveGraph(updatedNodes); // Save the whole graph for other property changes
+      saveGraph(updatedNodes);
     }
-
+  
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-
+  
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
-  };
+  }; 
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
@@ -409,7 +440,9 @@ const App = () => {
               setStations={setStations}
               usedColors={usedColors}
               setUsedColors={setUsedColors}
-              updateGraph={updateGraph} // pass updateGraph to GraphComponent
+              updateGraph={updateGraph}
+              undoStack={undoStack}
+              undoAction={undoAction} 
             />
           </div>
           <EditorComponent

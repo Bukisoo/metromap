@@ -39,6 +39,7 @@ const GraphComponent = ({
   usedColors,
   setUsedColors,
   undoAction,
+  undoStack,
   updateGraph
 }) => {
   const svgRef = useRef(null);
@@ -279,21 +280,21 @@ const GraphComponent = ({
           })
           .each(function (d) {
             d3.select(this).append('circle').attr('r', 7);
-            
+
             const icon = d.childrenHidden ? faEyeSlash : faEye;
-    
+
             d3.select(this).append(() => {
               const iconElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-              
+
               // Create a new root and render the FontAwesomeIcon component
               const root = createRoot(iconElement);
               root.render(<FontAwesomeIcon icon={icon} />);
-              
+
               iconElement.setAttribute('width', '10');
               iconElement.setAttribute('height', '10');
               iconElement.setAttribute('x', '-5');
               iconElement.setAttribute('y', '-5');
-              
+
               return iconElement;
             });
           });
@@ -310,8 +311,8 @@ const GraphComponent = ({
       .attr('width', 75)
       .attr('height', 75);
 
-      const addButtonRoot = createRoot(addButton.node());
-      addButtonRoot.render(<RetroButton iconPath={addIconPath} onClick={addNode} />);
+    const addButtonRoot = createRoot(addButton.node());
+    addButtonRoot.render(<RetroButton iconPath={addIconPath} onClick={addNode} />);
 
     const binButton = svg.append('g')
       .attr('class', 'icon-circle bin-button no-hover-glow')
@@ -320,8 +321,8 @@ const GraphComponent = ({
       .attr('width', 75)
       .attr('height', 75);
 
-      const binButtonRoot = createRoot(binButton.node());
-      binButtonRoot.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />);
+    const binButtonRoot = createRoot(binButton.node());
+    binButtonRoot.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />);
 
     const undoButton = svg.append('g')
       .attr('class', 'icon-circle undo-button')
@@ -330,8 +331,10 @@ const GraphComponent = ({
       .attr('width', 75)
       .attr('height', 75);
 
-      const undoButtonRoot = createRoot(undoButton.node());
-      undoButtonRoot.render(<RetroButton iconPath={undoIconPath} onClick={undoAction} />);
+    const undoButtonRoot = createRoot(undoButton.node());
+    undoButtonRoot.render(
+      <RetroButton iconPath={undoIconPath} onClick={undoAction} />
+    );
 
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
@@ -469,18 +472,19 @@ const GraphComponent = ({
   };
 
   const addNode = async () => {
+    const oldNodes = JSON.parse(JSON.stringify(nodes));
+  
     const currentZoom = zoomRef.current;
     let newStationName = "New Node";
-    let availableStations = stations; // Start with the existing stations
+    let availableStations = stations;
   
     if (stations.length === 0) {
       const { latitude, longitude } = await getGeolocation();
       const fetchedStations = await fetchStations(latitude, longitude);
-      availableStations = fetchedStations; // Use fetched stations directly
-      setStations(fetchedStations); // Update state with fetched stations
+      availableStations = fetchedStations;
+      setStations(fetchedStations);
     }
   
-    // Ensure the name is unique
     const usedNames = new Set(flattenNodes(nodes).map(node => node.name));
     availableStations = availableStations.filter(station => !usedNames.has(station));
   
@@ -503,6 +507,13 @@ const GraphComponent = ({
   
     setNodes(prevNodes => {
       const updatedNodes = [...prevNodes, newNode];
+      
+      undoStack.current.push({
+        type: 'add_node',
+        previousState: oldNodes,
+        newState: updatedNodes,
+      });
+  
       updateGraph(updatedNodes);
       return updatedNodes;
     });
@@ -517,7 +528,8 @@ const GraphComponent = ({
     svg.call(d3.zoom().transform, currentZoom);
   };
   
-  
+
+
   // Helper function to get geolocation
   const getGeolocation = () => {
     return new Promise((resolve, reject) => {
@@ -535,6 +547,8 @@ const GraphComponent = ({
   };
 
   const removeNode = (nodeToRemove) => {
+    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Save current state
+  
     const removeNodeAndChildren = (nodes) => {
       return nodes.filter(node => {
         if (node.id === nodeToRemove.id) {
@@ -549,18 +563,22 @@ const GraphComponent = ({
   
     setNodes(prevNodes => {
       const updatedNodes = removeNodeAndChildren(prevNodes);
-      
-      // If the editor is open, close it when any node is deleted
+  
+      undoStack.current.push({
+        type: 'remove_node',
+        previousState: oldNodes,
+        newState: updatedNodes,
+      });
+  
       if (isEditorVisible) {
         setIsEditorVisible(false);
         setSelectedNode(null);
       }
-      
+  
       updateGraph(updatedNodes);
       return updatedNodes;
     });
   };
-  
 
   const toggleChildrenVisibility = (node) => {
     const toggleHidden = (nodes) => {
@@ -606,10 +624,12 @@ const GraphComponent = ({
 
   // Modify the connectNodes function similarly to preserve zoom state:
   const connectNodes = (sourceNode, targetNode) => {
-    const currentZoom = zoomRef.current;  // Store zoom before updating
-
+    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Save current state
+  
+    const currentZoom = zoomRef.current;
+  
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
-
+  
     const isDescendant = (parent, child) => {
       if (parent.id === child.id) return true;
       for (let node of parent.children || []) {
@@ -617,14 +637,14 @@ const GraphComponent = ({
       }
       return false;
     };
-
+  
     const removeNodeFromParent = (nodes, nodeToRemove) => {
       return nodes.map(node => ({
         ...node,
         children: (node.children || []).filter(child => child.id !== nodeToRemove.id).map(child => removeNodeFromParent([child], nodeToRemove)[0])
       }));
     };
-
+  
     const addNodeToNewParent = (nodes, sourceNode, targetNode) => {
       return nodes.map(node => {
         if (node.id === targetNode.id && !isDescendant(sourceNode, node)) {
@@ -644,21 +664,26 @@ const GraphComponent = ({
         return node;
       });
     };
-
+  
     setNodes(prevNodes => {
       let updatedNodes = removeNodeFromParent(prevNodes, sourceNode);
-
       updatedNodes = addNodeToNewParent(updatedNodes, sourceNode, targetNode);
-
       const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
+      
+      undoStack.current.push({
+        type: 'connect_nodes',
+        previousState: oldNodes,
+        newState: finalNodes,
+      });
+  
       updateGraph(finalNodes);
       return finalNodes;
     });
-
-    // Reapply the zoom state after updating nodes
+  
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
+  
 
   const drawRiver = (svg, nodes, width, height) => {
     const riverPathData = generateRandomRiverPath(nodes, width, height);
