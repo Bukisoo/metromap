@@ -118,18 +118,17 @@ const loadGraph = async () => {
       });
       const graph = JSON.parse(fileResponse.body);
 
-      // Enhanced empty graph check
       if (
-        !Array.isArray(graph) ||                // Not an array
-        (Array.isArray(graph) && graph.length === 0) ||  // An empty array
-        (typeof graph === 'object' && Object.keys(graph).length === 0)  // An empty object
+        !Array.isArray(graph) || 
+        (Array.isArray(graph) && graph.length === 0) || 
+        (typeof graph === 'object' && Object.keys(graph).length === 0) 
       ) {
-        return []; // Consider it as an empty graph
+        return []; // Return an empty array if the graph is empty
       }
 
       return graph;
     } else {
-      return []; // No existing file, return an empty array
+      return []; // No existing file, return an empty array to indicate a new graph is needed
     }
   } catch (error) {
     console.error("Error loading graph from Google Drive:", error);
@@ -275,30 +274,30 @@ const App = () => {
     const loadAndInitializeGraph = async () => {
       try {
         let fetchedStations = stations;
-
+  
         // Ensure we have station names before proceeding
         if (stations.length === 0) {
           const { latitude, longitude } = await getGeolocation();
           fetchedStations = await fetchStations(latitude, longitude);
           setStations(fetchedStations);
         }
-
+  
         // Load the graph
         let graph = await loadGraph();
-
+  
         // If the graph is empty, initialize it with fetched station names or fallback
         if (graph.length === 0) {
           graph = initialGraph(fetchedStations);
-          await saveGraph(graph); // Save only once after initialization
+          await saveGraph(graph, setSaveStatus); // Save the newly created graph immediately
         }
-
+  
         setNodes(graph);
         setIsGraphLoaded(true); // Mark the graph as loaded
       } catch (error) {
         console.error("Error loading and initializing the graph:", error);
       }
     };
-
+  
     if (isSignedIn && isGapiInitialized && !isGraphLoaded) {
       loadAndInitializeGraph(); // Only call loadGraph if signed in, gapi is initialized, and graph is not already loaded
     }
