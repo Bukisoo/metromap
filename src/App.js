@@ -208,30 +208,42 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
 };
 
 
-const saveNodeNote = async (id, newNote, nodes, setNodes, setSaveStatus, onSuccess, onError) => {
+const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onError) => {
   try {
+    // Step 1: Load the current graph from Google Drive
+    const graph = await loadGraph();
+
+    if (!graph || !Array.isArray(graph)) {
+      throw new Error('Failed to load the graph');
+    }
+
+    // Step 2: Find and update the specific node in the graph
     const updateNoteInNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
-          return { ...node, notes: newNote };
+          return { ...node, notes: newNote }; // Update the note for the matching node
         } else if (node.children) {
-          return { ...node, children: updateNoteInNodes(node.children) };
+          return { ...node, children: updateNoteInNodes(node.children) }; // Recursively update children
         }
         return node;
       });
     };
 
-    const updatedNodes = updateNoteInNodes(nodes);
-    setNodes(updatedNodes);
+    const updatedGraph = updateNoteInNodes(graph);
 
-    await saveGraph(updatedNodes, setSaveStatus, null, onSuccess);
+    // Update the local state
+    setNodes(updatedGraph); // This line expects setNodes to be a valid function
 
-    console.log("Note update initiated for saving to Google Drive.");
+    // Step 3: Save the updated graph back to Google Drive
+    await saveGraph(updatedGraph, setSaveStatus, null, onSuccess);
+
+    console.log("Note update successfully saved to Google Drive.");
   } catch (error) {
     console.error("Error saving note to Google Drive:", error);
     if (onError) onError();
   }
 };
+
 
 
 const App = () => {
@@ -418,7 +430,7 @@ const App = () => {
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
-
+  
     const updateNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
@@ -433,32 +445,33 @@ const App = () => {
         return node;
       });
     };
-
+  
     const updatedNodes = updateNodes(nodes);
-
+  
     undoStack.current.push({
       type: 'update_node',
       previousState: oldNodes,
       newState: updatedNodes,
     });
-
-    setNodes(updatedNodes);
-
+  
+    setNodes(updatedNodes); // Ensure this function is correctly passed
+  
     if (property === 'notes') {
-      saveNodeNote(id, value, nodes, setNodes, setSaveStatus, onSuccess, onError);
+      saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
     } else {
       saveGraph(updatedNodes, setSaveStatus);
     }
-
+  
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-
+  
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
   };
+  
 
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
@@ -506,13 +519,18 @@ const App = () => {
               setStations={setStations}
               usedColors={usedColors}
               setUsedColors={setUsedColors}
+              updateGraph={updateGraph}
+              undoStack={undoStack}
+              undoAction={undoAction} 
             />
           </div>
           <EditorComponent
             selectedNode={selectedNode}
+            handleDetachNode={handleDetachNode}
             updateNodeProperty={updateNodeProperty}
             saveStatus={saveStatus}
-            setSaveStatus={setSaveStatus}
+            setNodes={setNodes}
+            setSaveStatus={setSaveStatus} 
             isOpen={isEditorVisible}
             setIsOpen={setIsEditorVisible}
           />

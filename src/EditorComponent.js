@@ -41,8 +41,6 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
   const lastLoadedNodeIdRef = useRef(null);
   const titleRef = useRef(null);
 
-
-
   const saveContent = useCallback((content, nodeId) => {
     if (nodeId && !isLoading) {
       //console.log(`Saving content for node: ${nodeId}`);
