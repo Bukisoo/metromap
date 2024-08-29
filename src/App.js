@@ -261,6 +261,7 @@ const App = () => {
   const [saveStatus, setSaveStatus] = useState('saved');
   const [isOffline, setIsOffline] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     // Handle online/offline events
@@ -498,6 +499,26 @@ const App = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        isMenuOpen &&
+        !event.target.classList.contains('accent-bar') // Prevent closing when clicking on the accent bar
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+
   return (
     <div className="app-container">
       {!isSignedIn ? (
@@ -537,11 +558,12 @@ const App = () => {
           <Menu
             isMenuOpen={isMenuOpen}
             toggleMenu={toggleMenu}
-            nodes={nodes} 
+            nodes={nodes}
+            menuRef={menuRef}  // Pass the ref to the Menu component
           />
           <div
             className="accent-bar"
-            onMouseEnter={toggleMenu} // Open the menu when hovering over the accent bar
+            onClick={toggleMenu} // Toggle the menu when clicking on the accent bar
           ></div>
         </>
       ) : (

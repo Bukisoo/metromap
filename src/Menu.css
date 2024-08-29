@@ -82,3 +82,26 @@
   .normal-weight {
     text-decoration: none; /* Normal text style for non-matching parts */
   }
+
+  .menu .search-result-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .menu .result-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .menu .result-snippet {
+    font-size: 14px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .highlight {
+    text-decoration: underline;
+    font-weight: bold;
+  }
+  
