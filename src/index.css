@@ -52,15 +52,12 @@ body {
 
 
 .glow {
-  filter: drop-shadow(0 0 10px #848FA5);
+  filter: drop-shadow(0 0 10px #ffffff) drop-shadow(0 0 20px rgba(255, 255, 255, 0.7));
 }
 circle.glow {
-  stroke: #523A34;
-  stroke-width: 0px;
-  
+  stroke: #ffffff;
+  stroke-width: 3px;
 }
-
-
 
 
 .graph-container.full-width {
