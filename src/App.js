@@ -6,6 +6,7 @@ import LoadingScreen from './LoadingScreen';
 import './App.css';
 import { gapi } from 'gapi-script';
 import { fetchStations, getGeolocation } from './fetchStations';
+import NoConnectionScreen from './NoConnectionScreen';
 
 const FILE_NAME = 'MetroMapData.json';
 const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
@@ -119,9 +120,9 @@ const loadGraph = async () => {
       const graph = JSON.parse(fileResponse.body);
 
       if (
-        !Array.isArray(graph) || 
-        (Array.isArray(graph) && graph.length === 0) || 
-        (typeof graph === 'object' && Object.keys(graph).length === 0) 
+        !Array.isArray(graph) ||
+        (Array.isArray(graph) && graph.length === 0) ||
+        (typeof graph === 'object' && Object.keys(graph).length === 0)
       ) {
         return []; // Return an empty array if the graph is empty
       }
@@ -245,6 +246,26 @@ const App = () => {
   const undoStack = useRef([]); // For storing undo actions
   const maxUndoActions = 10; // Limit to the last 10 actions
   const [saveStatus, setSaveStatus] = useState('saved');
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    // Handle online/offline events
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Check initial connection status
+    if (!navigator.onLine) {
+      setIsOffline(true);
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Initialize Google API client
   useEffect(() => {
@@ -274,30 +295,30 @@ const App = () => {
     const loadAndInitializeGraph = async () => {
       try {
         let fetchedStations = stations;
-  
+
         // Ensure we have station names before proceeding
         if (stations.length === 0) {
           const { latitude, longitude } = await getGeolocation();
           fetchedStations = await fetchStations(latitude, longitude);
           setStations(fetchedStations);
         }
-  
+
         // Load the graph
         let graph = await loadGraph();
-  
+
         // If the graph is empty, initialize it with fetched station names or fallback
         if (graph.length === 0) {
           graph = initialGraph(fetchedStations);
           await saveGraph(graph, setSaveStatus); // Save the newly created graph immediately
         }
-  
+
         setNodes(graph);
         setIsGraphLoaded(true); // Mark the graph as loaded
       } catch (error) {
         console.error("Error loading and initializing the graph:", error);
       }
     };
-  
+
     if (isSignedIn && isGapiInitialized && !isGraphLoaded) {
       loadAndInitializeGraph(); // Only call loadGraph if signed in, gapi is initialized, and graph is not already loaded
     }
@@ -308,10 +329,13 @@ const App = () => {
     if (undoStack.current.length > 0) {
       const lastAction = undoStack.current.pop();
       console.log("Last action:", lastAction);
-  
+
       if (lastAction.previousState) {
         // Revert to the previous state
         setNodes(lastAction.previousState);
+
+        // Save the reverted state to Google Drive
+        saveGraph(lastAction.previousState, setSaveStatus);
       } else {
         console.warn("No previous state found for this action.");
       }
@@ -319,57 +343,104 @@ const App = () => {
       console.log("Undo stack is empty.");
     }
   };
-  
+
+
   const updateGraph = (newNodes) => {
     setNodes(newNodes);
     saveGraph(newNodes, setSaveStatus); // Ensure setSaveStatus is passed here
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
   const handleDetachNode = (nodeId) => {
+    console.log(`Starting to detach node: ${nodeId}`);
+
     const oldNodes = JSON.parse(JSON.stringify(nodes)); // Clone the current state of nodes
-  
+    let nodeToDetach = null;
+
+    // Step 1: Find the node and remove it from its parent
     const detachNode = (nodes) => {
-      let nodeToDetach = null;
-      const updatedNodes = nodes.map(node => {
+      console.log('Traversing nodes:', nodes);
+      return nodes.map(node => {
+        console.log(`Inspecting node: ${node.id}`);
         if (node.children) {
           const filteredChildren = node.children.filter(child => {
+            console.log(`Checking child node: ${child.id}`);
             if (child.id === nodeId) {
-              nodeToDetach = child;
+              nodeToDetach = child; // Store the node to detach
+              console.log(`Node to detach found: ${child.id}`);
               return false; // Remove the child from its parent
             }
             return true;
           });
-  
-          return { ...node, children: filteredChildren };
+
+          // Recursively continue to search in the child nodes
+          const updatedChildren = filteredChildren.map(child => {
+            if (child.children) {
+              return detachNode([child])[0];
+            }
+            return child;
+          });
+
+          return { ...node, children: updatedChildren };
         }
         return node;
       });
-  
-      if (nodeToDetach) {
-        updatedNodes.push(nodeToDetach); // Add it to the top-level nodes
-      }
-      return updatedNodes;
     };
-  
-    const updatedNodes = detachNode(nodes);
-  
-    // Push to undo stack
+
+    let updatedNodes = detachNode(nodes);
+
+    // Step 2: If the node was found and detached, add it as a top-level node
+    if (nodeToDetach) {
+      console.log(`Adding node as top-level: ${nodeToDetach.id}`);
+      updatedNodes.push(nodeToDetach);
+    } else {
+      console.log('Node to detach not found or already top-level');
+    }
+
+    // Step 3: Push to undo stack and update state
     undoStack.current.push({
       type: 'detach_node',
       previousState: oldNodes, // Save the old state
       newState: updatedNodes,  // Save the new state
     });
-  
+
+    console.log('Updated nodes after detaching:', updatedNodes);
+
     // Update nodes state
     setNodes(updatedNodes);
-  
+
     // Save the updated graph
     saveGraph(updatedNodes, setSaveStatus);
+
+    console.log('Detachment process complete.');
   };
+
+
+
+
+
+
+
+
+
+
+
+
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
-  
+
     const updateNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
@@ -384,51 +455,54 @@ const App = () => {
         return node;
       });
     };
-  
+
     const updatedNodes = updateNodes(nodes);
-  
+
     undoStack.current.push({
       type: 'update_node',
       previousState: oldNodes,
       newState: updatedNodes,
     });
-  
+
     setNodes(updatedNodes);
-  
+
     if (property === 'notes') {
       saveNodeNote(id, value, nodes, setNodes, setSaveStatus, onSuccess, onError);
     } else {
       saveGraph(updatedNodes, setSaveStatus);
     }
-  
+
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-  
+
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
-  };  
+  };
+
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
       return nodes.map(n => {
         if (n.color === originalColor) {
           n.color = newColor;
-        }
-        if (n.children) {
-          n.children = updateColor(n.children);
+          if (n.children) {
+            n.children = updateColor(n.children);
+          }
         }
         return n;
       });
     };
+
     node.color = newColor;
     if (node.children) {
       node.children = updateColor(node.children);
     }
     return node;
   };
+
 
   return (
     <div className="app-container">
@@ -453,7 +527,7 @@ const App = () => {
               setUsedColors={setUsedColors}
               updateGraph={updateGraph}
               undoStack={undoStack}
-              undoAction={undoAction} 
+              undoAction={undoAction}
             />
           </div>
           <EditorComponent
@@ -461,7 +535,7 @@ const App = () => {
             handleDetachNode={handleDetachNode}
             updateNodeProperty={updateNodeProperty}
             saveStatus={saveStatus}
-            setSaveStatus={setSaveStatus} 
+            setSaveStatus={setSaveStatus}
             isOpen={isEditorVisible}
             setIsOpen={setIsEditorVisible}
           />
@@ -470,6 +544,7 @@ const App = () => {
       ) : (
         <LoadingScreen /> // Show a loading message until the graph is loaded
       )}
+      {isOffline && <NoConnectionScreen />} {/* Display NoConnectionScreen when offline */}
     </div>
   );
 };

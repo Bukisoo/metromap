@@ -8,6 +8,12 @@ import debounce from 'lodash/debounce';
 import DOMPurify from 'dompurify';
 import './EditorComponent.css';
 
+const customQuoteIcon = `
+  <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke="currentColor">
+    <path d="M 14 5 L 14 10 C 14 11 13 12 12 12 L 10 12 C 8.65 12 8.65 10 10 10 L 11 10 C 11 10 12 10 12 9 L 10 9 C 9 9 8 8 8 7 L 8 5 C 8 4 9 3 10 3 L 12 3 C 13 3 14 4 14 5 Z M 6 5 L 6 10 C 6 11 5 12 4 12 L 2 12 C 0.65 12 0.65 10 2 10 L 3 10 C 3 10 4 10 4 9 L 2 9 C 1 9 0 8 0 7 L 0 5 C 0 4 1 3 2 3 L 4 3 C 5 3 6 4 6 5 Z"></path>
+  </svg>
+`;
+
 if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
@@ -84,6 +90,7 @@ const EditorComponent = ({ selectedNode, updateNodeProperty, isOpen, setIsOpen, 
           syntax: {
             highlight: (text) => window.hljs.highlightAuto(text).value,
           },
+          
         }
       });
       //console.log("Quill editor initialized");

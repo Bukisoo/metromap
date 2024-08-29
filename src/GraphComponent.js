@@ -11,7 +11,6 @@ import { fetchStations, getGeolocation } from './fetchStations';
 const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
 const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M 3 -5 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13 M -8 15 L -10 -10 L 10 -10 L 8 15 Z";
 const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
-const minimalistDiskIconPath = "M2 2 L18 2 L18 18 L2 18 Z M4 4 L16 4 L16 16 L4 16 Z M6 12 L10 12 L10 16 L6 16 Z";
 
 
 const rootStyle = getComputedStyle(document.documentElement);

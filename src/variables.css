@@ -2,16 +2,17 @@
   /* Background colors */
   --graph-background: #EEEDDD;
   --graph-textcolor: #000000;
-  --editor-background: #333333;
+  --editor-background: #3c1e1e;
   --grid-color: #c9c3a4;
 
   /* Accent color */
   --accent-color: #ec5604;
+  --editor-accent: #ff6347;
 
   /* Save indicator colors */
-  --save-indicator-loading: #0000ff;
-  --save-indicator-saved: #00ff00;
-  --save-indicator-saving: #ffa500;
+  --save-indicator-loading: #D2691E;
+  --save-indicator-saved: #228B22;
+  --save-indicator-saving: #FF8C00;
 
   /* Action button spacing */
   --button-spacing: 10px;
