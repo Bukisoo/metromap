@@ -1,11 +1,14 @@
 /* NoConnectionScreen.css */
+
+@import url('./variables.css');
+
 .no-connection-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(240, 234, 214, 0.8); /* Use the background color with 80% opacity */
+    background-color: var(--graph-background); /* Use the background color with 80% opacity */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -14,7 +17,7 @@
   
   .no-connection-message {
     font-size: 36px;
-    color: #333; /* Text color */
+    color: var(--graph-textcolor); /* Text color */
     font-family: 'EB Garamond', Garamond, serif;
     text-align: center;
   }

@@ -247,6 +247,7 @@ const App = () => {
   const maxUndoActions = 10; // Limit to the last 10 actions
   const [saveStatus, setSaveStatus] = useState('saved');
   const [isOffline, setIsOffline] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     // Handle online/offline events
@@ -350,18 +351,6 @@ const App = () => {
     saveGraph(newNodes, setSaveStatus); // Ensure setSaveStatus is passed here
   };
 
-
-
-
-
-
-
-
-
-
-
-
-
   const handleDetachNode = (nodeId) => {
     console.log(`Starting to detach node: ${nodeId}`);
 
@@ -425,18 +414,6 @@ const App = () => {
 
     console.log('Detachment process complete.');
   };
-
-
-
-
-
-
-
-
-
-
-
-
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
@@ -503,6 +480,9 @@ const App = () => {
     return node;
   };
 
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   return (
     <div className="app-container">
@@ -525,26 +505,31 @@ const App = () => {
               setStations={setStations}
               usedColors={usedColors}
               setUsedColors={setUsedColors}
-              updateGraph={updateGraph}
-              undoStack={undoStack}
-              undoAction={undoAction}
             />
           </div>
           <EditorComponent
             selectedNode={selectedNode}
-            handleDetachNode={handleDetachNode}
             updateNodeProperty={updateNodeProperty}
             saveStatus={saveStatus}
             setSaveStatus={setSaveStatus}
             isOpen={isEditorVisible}
             setIsOpen={setIsEditorVisible}
           />
-          <div className="accent-bar"></div>
+          <div
+            className={`menu ${isMenuOpen ? 'open' : ''}`}
+            onMouseLeave={toggleMenu} // Close the menu when the mouse leaves
+          >
+            {/* Future content for the menu */}
+          </div>
+          <div
+            className="accent-bar"
+            onMouseEnter={toggleMenu} // Open the menu when hovering over the accent bar
+          ></div>
         </>
       ) : (
         <LoadingScreen /> // Show a loading message until the graph is loaded
       )}
-      {isOffline && <NoConnectionScreen />} {/* Display NoConnectionScreen when offline */}
+      {isOffline && <NoConnectionScreen />}
     </div>
   );
 };
