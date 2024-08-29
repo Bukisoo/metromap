@@ -7,6 +7,7 @@ import './App.css';
 import { gapi } from 'gapi-script';
 import { fetchStations, getGeolocation } from './fetchStations';
 import NoConnectionScreen from './NoConnectionScreen';
+import Menu from './Menu';
 
 const FILE_NAME = 'MetroMapData.json';
 const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
@@ -515,12 +516,11 @@ const App = () => {
             isOpen={isEditorVisible}
             setIsOpen={setIsEditorVisible}
           />
-          <div
-            className={`menu ${isMenuOpen ? 'open' : ''}`}
-            onMouseLeave={toggleMenu} // Close the menu when the mouse leaves
-          >
-            {/* Future content for the menu */}
-          </div>
+          <Menu
+            isMenuOpen={isMenuOpen}
+            toggleMenu={toggleMenu}
+            nodes={nodes} 
+          />
           <div
             className="accent-bar"
             onMouseEnter={toggleMenu} // Open the menu when hovering over the accent bar

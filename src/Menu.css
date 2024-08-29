@@ -1,0 +1,84 @@
+/* Menu.css */
+@import url('./variables.css');
+
+/* Accent bar */
+.accent-bar {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 25px;
+    height: 300px;
+    background-color: var(--accent-color);
+    z-index: 1001;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.3s ease; /* Smooth movement */
+    mix-blend-mode: multiply; /* Blend mode to create a filter-like effect */
+  }
+  
+  /* Menu panel */
+  .menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background-color: var(--graph-background);
+    transition: width 0.3s ease, transform 0.3s ease; /* Smooth transition for expanding */
+    z-index: 1000;
+    overflow: hidden; /* Hide the right border when the menu is closed */
+  }
+  
+  /* Expand the menu and move the accent bar on hover or open state */
+  .menu.open {
+    width: var(--meny-width);
+    border-right: 5px solid var(--accent-color); /* Right border using accent color */
+  }
+  
+  /* Move the accent bar along with the menu */
+  .menu.open ~ .accent-bar {
+    transform: translateY(-50%) translateX(var(--meny-width));
+  }
+  
+  /* Hide the border when the menu is not open */
+  .menu {
+    border-right: none;
+  }
+
+
+  .search-bar {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-bottom: 1px solid var(--accent-color);
+    background-color: var(--graph-background);
+    color: var(--graph-textcolor);
+  }
+  
+  .search-results {
+    padding: 10px;
+  }
+  
+  .search-result-item {
+    margin-bottom: 10px;
+  }
+  
+  .result-title {
+    font-family: 'EB Garamond', serif;
+    font-weight: 800; /* Default bold weight */
+  }
+  
+  .result-snippet {
+    font-size: 14px;
+    color: var(--graph-textcolor);
+  }
+  
+  .highlight {
+    text-decoration: underline; /* Underline the matching text */
+  }
+  
+  .normal-weight {
+    text-decoration: none; /* Normal text style for non-matching parts */
+  }
