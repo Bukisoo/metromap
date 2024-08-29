@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
+import * as d3 from 'd3';
 import './Menu.css';
 
 const highlightMatch = (text, query) => {
@@ -73,8 +74,19 @@ const generateSnippets = (text, query, totalResults) => {
     return combinedSnippets;
 };
 
+const highlightSearchResults = (results) => {
+    const svg = d3.select('svg'); // Assuming d3 is globally available
+    svg.selectAll('.node-circle').classed('glow', false);
 
-const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef }) => {
+    results.forEach(result => {
+        svg.selectAll('.node-circle')
+            .filter(node => node.id === result.id)
+            .classed('glow', true);
+    });
+};
+
+
+const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef, setSelectedNode, setIsEditorVisible }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
 
@@ -113,9 +125,16 @@ const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef }) => {
             }).filter(Boolean);  // Remove null entries
 
             setSearchResults(processedResults);
+            highlightSearchResults(processedResults);
         } else {
             setSearchResults([]);
         }
+    };
+
+    const handleResultClick = (node) => {
+        setSelectedNode(node);  // Select the node
+        setIsEditorVisible(true);  // Open the editor
+        toggleMenu();  // Close the menu
     };
 
     return (
@@ -132,7 +151,11 @@ const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef }) => {
             />
             <div className="search-results">
                 {searchResults.map((result) => (
-                    <div key={result.id} className="search-result-item">
+                    <div
+                        key={result.id}
+                        className="search-result-item"
+                        onClick={() => handleResultClick(result)}
+                    >
                         <div className="result-title">
                             {highlightMatch(result.name, searchQuery)}
                         </div>

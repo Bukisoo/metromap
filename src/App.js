@@ -431,7 +431,7 @@ const App = () => {
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
-  
+
     const updateNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
@@ -446,33 +446,33 @@ const App = () => {
         return node;
       });
     };
-  
+
     const updatedNodes = updateNodes(nodes);
-  
+
     undoStack.current.push({
       type: 'update_node',
       previousState: oldNodes,
       newState: updatedNodes,
     });
-  
+
     setNodes(updatedNodes); // Ensure this function is correctly passed
-  
+
     if (property === 'notes') {
       saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
     } else {
       saveGraph(updatedNodes, setSaveStatus);
     }
-  
+
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-  
+
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
   };
-  
+
 
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
@@ -542,7 +542,7 @@ const App = () => {
               setUsedColors={setUsedColors}
               updateGraph={updateGraph}
               undoStack={undoStack}
-              undoAction={undoAction} 
+              undoAction={undoAction}
             />
           </div>
           <EditorComponent
@@ -551,7 +551,7 @@ const App = () => {
             updateNodeProperty={updateNodeProperty}
             saveStatus={saveStatus}
             setNodes={setNodes}
-            setSaveStatus={setSaveStatus} 
+            setSaveStatus={setSaveStatus}
             isOpen={isEditorVisible}
             setIsOpen={setIsEditorVisible}
           />
@@ -559,7 +559,9 @@ const App = () => {
             isMenuOpen={isMenuOpen}
             toggleMenu={toggleMenu}
             nodes={nodes}
-            menuRef={menuRef}  // Pass the ref to the Menu component
+            menuRef={menuRef}
+            setSelectedNode={setSelectedNode}
+            setIsEditorVisible={setIsEditorVisible}
           />
           <div
             className="accent-bar"
