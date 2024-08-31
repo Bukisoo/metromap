@@ -11,6 +11,7 @@ import { fetchStations, getGeolocation } from './fetchStations';
 const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
 const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M 3 -5 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13 M -8 15 L -10 -10 L 10 -10 L 8 15 Z";
 const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
+const downloadIconPath = "M 0 15 L 13.5 6 L 0 15 L 0 -12 L 0 -12 L 0 15 L -13.5 6 Z M -13.5 -16.5 L 13.5 -16.5"; 
 
 
 const rootStyle = getComputedStyle(document.documentElement);
@@ -59,6 +60,76 @@ const GraphComponent = ({
       createForceDirectedGraph();
     }
   }, [nodes, isEditorVisible]);
+
+  const stripHtmlTags = (html) => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+  
+  const extractBranch = (node) => {
+    const result = {
+      title: node.name,
+      note: stripHtmlTags(node.notes || ''),
+      children: []
+    };
+  
+    if (node.children && node.children.length > 0) {
+      result.children = node.children.map(child => extractBranch(child));
+    }
+  
+    return result;
+  };
+  
+  const findBranchRoot = (nodes, selectedNodeId) => {
+    let branchRoot = null;
+  
+    const traverse = (node) => {
+      if (node.id === selectedNodeId) {
+        branchRoot = node;
+        return true;
+      }
+  
+      if (node.children && node.children.length > 0) {
+        for (let child of node.children) {
+          if (traverse(child)) {
+            branchRoot = node;
+            return true;
+          }
+        }
+      }
+  
+      return false;
+    };
+  
+    nodes.forEach(node => traverse(node));
+  
+    return branchRoot;
+  };
+  
+  const downloadSelectedBranch = () => {
+    if (!selectedNode) return;
+  
+    // Find the root of the branch that contains the selected node
+    const branchRoot = findBranchRoot(nodes, selectedNode.id);
+  
+    if (!branchRoot) return;
+  
+    // Extract the branch
+    const branch = extractBranch(branchRoot);
+  
+    // Convert to JSON
+    const jsonStr = JSON.stringify(branch, null, 2);
+  
+    // Create a blob and trigger the download
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${branchRoot.name}-branch.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
@@ -334,6 +405,17 @@ const GraphComponent = ({
     undoButtonRoot.render(
       <RetroButton iconPath={undoIconPath} onClick={undoAction} />
     );
+
+    const downloadButton = svg.append('g')
+      .attr('class', 'icon-circle download-button')
+      .attr('transform', `translate(${firstButtonX + 3 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
+      .append('foreignObject')
+      .attr('width', 75)
+      .attr('height', 75);
+
+    const downloadButtonRoot = createRoot(downloadButton.node());
+    downloadButtonRoot.render(<RetroButton iconPath={downloadIconPath} onClick={downloadSelectedBranch} />);
+
 
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
@@ -732,36 +814,6 @@ const GraphComponent = ({
 
     return dfs(startNode);
   };
-
-
-  const generateRandomRiverPath = (nodes, width, height) => {
-    const riverPath = [];
-    const numberOfSegments = Math.floor(Math.random() * 5) + 3; // Random segments between 3 and 7
-
-    let x = Math.random() * width * 0.2;  // Start near the left edge
-    let y = Math.random() * height;  // Random vertical start
-
-    for (let i = 0; i < numberOfSegments; i++) {
-      // Move to the right and up/down with a 45° bend
-      const directionX = Math.random() > 0.5 ? 1 : -1;
-      const directionY = Math.random() > 0.5 ? 1 : -1;
-
-      const segmentLengthX = Math.random() * width * 0.2;
-      const segmentLengthY = segmentLengthX * directionY;
-
-      x = Math.min(Math.max(x + segmentLengthX * directionX, 0), width);
-      y = Math.min(Math.max(y + segmentLengthY, 0), height);
-
-      riverPath.push([x, y]);
-    }
-
-    // Smooth the river path using D3 line generator
-    const lineGenerator = d3.line().curve(d3.curveBasis);
-    const pathData = lineGenerator(riverPath);
-
-    return pathData;
-  };
-
 
   return <svg ref={svgRef}></svg>;
 };
