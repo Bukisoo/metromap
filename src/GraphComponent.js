@@ -16,7 +16,7 @@ const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -2
 const rootStyle = getComputedStyle(document.documentElement);
 
 const colorPalette = [
-  rootStyle.getPropertyValue('--retro-blue').trim(),
+  rootStyle.getPropertyValue('--retro-green').trim(),
   rootStyle.getPropertyValue('--retro-pink').trim(),
   rootStyle.getPropertyValue('--retro-yellow').trim(),
   rootStyle.getPropertyValue('--retro-teal').trim(),
@@ -98,16 +98,68 @@ const GraphComponent = ({
     return -1;
   };
 
-  const flattenNodes = (nodes) => {
+  const isBranchNode = (node) => node.parent && node.children && node.children.length > 0;
+  const isLeafNode = (node) => !node.children || node.children.length === 0;
+  const isTopLevelNode = (node) => !node.parent;
+
+  // Function to determine the node style
+  const getNodeStyle = (node) => {
+    if (isBranchNode(node)) {
+      return {
+        radius: 3, // Branch nodes are small points
+        fill: '#FFFFFF', // White fill for branch nodes
+        stroke: null, // No stroke for branch nodes
+      };
+    } else if (isTopLevelNode(node)) {
+      return {
+        outerRadius: 10, // Larger radius for top-level nodes
+        innerRadius: 5,
+        fill: getNodeColor(node),
+        stroke: graphBackground,
+      };
+    } else if (isLeafNode(node)) {
+      return {
+        outerRadius: 10, // Same size as top-level for leaves
+        innerRadius: 5,
+        fill: getNodeColor(node),
+        stroke: graphBackground,
+      };
+    }
+  };
+
+
+  const flattenNodes = (nodes, parent = null) => {
     let flatNodes = [];
     nodes.forEach(node => {
-      flatNodes.push(node);
+      // Add parent reference to the node
+      const nodeWithParent = { ...node, parent };
+
+      // Add the current node to the flat list
+      flatNodes.push(nodeWithParent);
+
+      // Recursively process children
       if (node.children && !node.childrenHidden) {
-        flatNodes = flatNodes.concat(flattenNodes(node.children));
+        flatNodes = flatNodes.concat(flattenNodes(node.children, nodeWithParent));
       }
     });
     return flatNodes;
   };
+
+  const logNodeInfo = (nodes) => {
+    nodes.forEach((node) => {
+      console.log(
+        `Node: ${node.name}, Parent: ${node.parent ? node.parent.name : 'None'}, Children: ${node.children ? node.children.length : 0
+        }`
+      );
+      console.log(
+        `Classification: ${isTopLevelNode(node) ? 'Top Level' : isLeafNode(node) ? 'Leaf' : isBranchNode(node) ? 'Branch' : 'Unknown'
+        }`
+      );
+    });
+  };
+
+  // Call logNodeInfo during rendering
+  logNodeInfo(flattenNodes(nodes));
 
   const getLinks = (nodes) => {
     let links = [];
@@ -169,13 +221,28 @@ const GraphComponent = ({
     const links = getLinks(nodes).filter(link => link && link.source && link.target);
 
     const simulation = d3.forceSimulation(flatNodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-      .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30))
-      .force('x', d3.forceX(width / 2).strength(0.1))
-      .force('y', d3.forceY(height / 2).strength(0.1))
-      .alphaDecay(0.05);
+      // Force that keeps links at a consistent length
+      .force('link', d3.forceLink(links)
+        .id(d => d.id)
+        .distance(50) // Adjust this for the desired link length
+        .strength(1) // Keep links strong to enforce consistent lengths
+      )
+      // Force that repels nodes from each other
+      .force('charge', d3.forceManyBody()
+        .strength(-1000) // Increase repulsion to spread nodes farther apart
+      )
+      // Force that centers the graph
+      .force('center', d3.forceCenter(width / 2, height / 2)
+        .strength(0.1) // Reduce centering strength for a less compact graph
+      )
+      // Force to keep nodes aligned within the bounds
+      .force('x', d3.forceX(width / 2)
+        .strength(0.05) // Lower x-axis attraction
+      )
+      .force('y', d3.forceY(height / 2)
+        .strength(0.05) // Lower y-axis attraction
+      )
+      .alphaDecay(0.05); // Controls how quickly the simulation stabilizes
 
     simulationRef.current = simulation;
 
@@ -238,34 +305,69 @@ const GraphComponent = ({
     node.each(function (d) {
       const g = d3.select(this);
 
+      // Append text label for the node
       const text = g.append('text')
-        .text(d => d.name)
-        .attr('text-anchor', 'start')
-        .attr('dominant-baseline', 'central')
-        .attr('transform', 'rotate(-45)')
-        .attr('x', 10)
-        .attr('y', -15)
-        .attr('font-weight', 'bold')
-        .style('user-select', 'none')
-        .style('fill', graphTextcolor)
-        .style('font-size', '15px')
-        .style('font-family', 'EB Garamond, serif'); // Add this line to use EB Garamond
+        .text(d.name) // Use the node's name
+        .attr('text-anchor', 'start') // Align text to the start
+        .attr('dominant-baseline', 'central') // Vertically align the text
+        .attr('transform', 'rotate(-45)') // Rotate text at a 45-degree angle
+        .attr('x', 10) // Offset text horizontally
+        .attr('y', -15) // Offset text vertically
+        .attr('font-weight', 'bold') // Set font weight to bold
+        .style('user-select', 'none') // Prevent text selection
+        .style('fill', graphTextcolor) // Set text color dynamically
+        .style('font-size', '15px') // Set font size
+        .style('font-family', 'EB Garamond, serif'); // Use EB Garamond font
 
-
+      // Get bounding box dimensions of the text
       const bbox = text.node().getBBox();
 
+      // Calculate diagonal for positioning the background rectangle
       const diagonal = Math.sqrt(bbox.width * bbox.width + bbox.height * bbox.height);
 
-      g.insert('rect', 'text')
-        .attr('x', 7)
-        .attr('y', -25)
-        .attr('width', diagonal + 5)
-        .attr('height', 20)
-        .attr('transform', 'rotate(-45)')
-        .attr('rx', 5)
-        .attr('ry', 5)
-        .style('fill', graphBackground)
-        .style('opacity', 0.8);
+      // Insert a background rectangle behind the text
+      g.insert('rect', 'text') // Insert rectangle before the text
+        .attr('x', 7) // Offset the rectangle horizontally
+        .attr('y', -25) // Offset the rectangle vertically
+        .attr('width', diagonal + 5) // Adjust rectangle width based on diagonal
+        .attr('height', 20) // Set rectangle height
+        .attr('transform', 'rotate(-45)') // Match text rotation
+        .attr('rx', 5) // Add rounded corners (horizontal radius)
+        .attr('ry', 5) // Add rounded corners (vertical radius)
+        .style('fill', graphBackground) // Set rectangle fill color
+        .style('opacity', 0.8); // Set rectangle transparency
+    });
+
+    node.each(function (d) {
+      const g = d3.select(this);
+
+      // Remove any existing circles to prevent duplication
+      g.selectAll('circle').remove();
+
+      if (isBranchNode(d)) {
+        // Background circle for branch joint
+        g.append('circle')
+          .attr('r', 5) // Slightly larger radius to fill gaps
+          .attr('fill', getNodeColor(d)); // Use branch color
+
+        // Foreground small white circle
+        g.append('circle')
+          .attr('r', 3) // Smaller white dot
+          .attr('fill', '#FFFFFF');
+      } else {
+        // Top-level or leaf nodes
+        const nodeStyle = getNodeStyle(d);
+
+        g.append('circle')
+          .attr('r', nodeStyle.outerRadius)
+          .attr('fill', nodeStyle.fill)
+          .attr('stroke', nodeStyle.stroke)
+          .attr('stroke-width', 2);
+
+        g.append('circle')
+          .attr('r', nodeStyle.innerRadius)
+          .attr('fill', graphBackground);
+      }
     });
 
     node.each(function (d) {
@@ -394,6 +496,24 @@ const GraphComponent = ({
 
       return path + `L${firstBendX},${firstBendY} L${secondBendX},${secondBendY} L${targetX},${targetY}`;
     };
+
+    const createGridForce = (gridSpacing = 50) => {
+      return () => {
+        return (alpha) => {
+          flatNodes.forEach((node) => {
+            if (!node.fx && !node.fy) { // Skip fixed nodes
+              const nearestX = Math.round(node.x / gridSpacing) * gridSpacing;
+              const nearestY = Math.round(node.y / gridSpacing) * gridSpacing;
+    
+              // Slowly nudge the node toward the nearest grid point
+              node.vx += (nearestX - node.x) * 0.1 * alpha; // Adjust strength as needed
+              node.vy += (nearestY - node.y) * 0.1 * alpha;
+            }
+          });
+        };
+      };
+    };
+    
 
     function dragstarted(event) {
       // Clear any existing timeout to avoid false triggering
