@@ -216,28 +216,24 @@ const GraphComponent = ({
     const links = getLinks(nodes).filter(link => link && link.source && link.target);
 
     const simulation = d3.forceSimulation(flatNodes)
-      // Force that keeps links at a consistent length
-      .force('link', d3.forceLink(links)
-        .id(d => d.id)
-        .distance(50) // Adjust this for the desired link length
-        .strength(1) // Keep links strong to enforce consistent lengths
-      )
-      // Force that repels nodes from each other
-      .force('charge', d3.forceManyBody()
-        .strength(-1000) // Increase repulsion to spread nodes farther apart
-      )
-      // Force that centers the graph
-      .force('center', d3.forceCenter(width / 2, height / 2)
-        .strength(0.1) // Reduce centering strength for a less compact graph
-      )
-      // Force to keep nodes aligned within the bounds
-      .force('x', d3.forceX(width / 2)
-        .strength(0.05) // Lower x-axis attraction
-      )
-      .force('y', d3.forceY(height / 2)
-        .strength(0.05) // Lower y-axis attraction
-      )
-      .alphaDecay(0.05); // Controls how quickly the simulation stabilizes
+    .force('link', d3.forceLink(links)
+      .id(d => d.id)
+      .distance(100) // Desired link length
+      .strength(1)) // Strong link constraints
+    .force('charge', d3.forceManyBody()
+      .strength(-500)) // Adjusted repulsion for a tighter layout
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('x', d3.forceX(width / 2).strength(0.05))
+    .force('y', d3.forceY(height / 2).strength(0.05))
+    .force('collision', d3.forceCollide()
+      .radius(d => {
+        const titleLength = d.name ? d.name.length * 5 : 0; // Adjust for title width
+        return Math.min(25, 20 + titleLength); // Cap the collision radius to avoid large spacing
+      })
+      .strength(0.8)) // Softer collision force for gentle adjustment
+    .alphaDecay(0.05); // Controls how quickly the simulation stabilizes
+  
+  
 
     simulationRef.current = simulation;
 
@@ -360,7 +356,7 @@ const GraphComponent = ({
       if (isLeafNode(d)) {
         // Keep a static counter for leaf nodes
         if (typeof window.leafCounter === 'undefined') {
-          window.leafCounter = 0; // Initialize the counter if not defined
+          window.leafCounter = 1; // Initialize the counter if not defined
         }
     
         const lineNumber = window.leafCounter++; // Increment the counter for each leaf node
@@ -391,11 +387,8 @@ const GraphComponent = ({
           .style('user-select', 'none'); // Disable text selection
       }
     });
+    window.leafCounter = 1;
     
-    
-    
-
-
     node.each(function (d) {
       if (d.children && d.children.length > 0) {
         d3.select(this).append('g')
