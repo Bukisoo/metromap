@@ -190,7 +190,7 @@ const GraphComponent = ({
         </feMerge>
       </filter>
     `);
-    
+
 
     const zoomGroup = svg.append('g')
       .attr('class', 'zoom-group')
@@ -285,81 +285,30 @@ const GraphComponent = ({
       setIsEditorVisible(true);
     });
 
-    node.append('circle')
-      .attr('r', 10)
-      .attr('fill', d => getNodeColor(d))
-      .attr('stroke', graphBackground)
-      .attr('stroke-width', 2)
-      .attr('class', 'node-circle');
-
-    node.append('circle')
-      .attr('r', 5)
-      .attr('class', 'node-circle')
-      .attr('fill', graphBackground);
-
-    node.each(function (d) {
-      const g = d3.select(this);
-
-      // Append text label for the node
-      const text = g.append('text')
-        .text(d.name) // Use the node's name
-        .attr('text-anchor', 'start') // Align text to the start
-        .attr('dominant-baseline', 'central') // Vertically align the text
-        .attr('transform', 'rotate(-45)') // Rotate text at a 45-degree angle
-        .attr('x', 10) // Offset text horizontally
-        .attr('y', -15) // Offset text vertically
-        .attr('font-weight', 'bold') // Set font weight to bold
-        .style('user-select', 'none') // Prevent text selection
-        .style('fill', graphTextcolor) // Set text color dynamically
-        .style('font-size', '15px') // Set font size
-        .style('font-family', 'EB Garamond, serif'); // Use EB Garamond font
-
-      // Get bounding box dimensions of the text
-      const bbox = text.node().getBBox();
-
-      // Calculate diagonal for positioning the background rectangle
-      const diagonal = Math.sqrt(bbox.width * bbox.width + bbox.height * bbox.height);
-
-      // Insert a background rectangle behind the text
-      g.insert('rect', 'text') // Insert rectangle before the text
-        .attr('x', 7) // Offset the rectangle horizontally
-        .attr('y', -25) // Offset the rectangle vertically
-        .attr('width', diagonal + 5) // Adjust rectangle width based on diagonal
-        .attr('height', 20) // Set rectangle height
-        .attr('transform', 'rotate(-45)') // Match text rotation
-        .attr('rx', 5) // Add rounded corners (horizontal radius)
-        .attr('ry', 5) // Add rounded corners (vertical radius)
-        .style('fill', graphBackground) // Set rectangle fill color
-        .style('opacity', 0.8); // Set rectangle transparency
-    });
-
     node.each(function (d) {
       const g = d3.select(this);
     
-      // Remove any existing circles to prevent duplication
-      g.selectAll('circle').remove();
+      // Remove existing elements to avoid duplication
+      g.selectAll('*').remove();
     
+      // Circle styling based on node type
       if (isBranchNode(d)) {
-        // Background circle for branch joint
         g.append('circle')
-          .attr('r', 5) // Slightly larger radius to fill gaps
+          .attr('r', 5)
           .attr('fill', getNodeColor(d));
     
-        // Foreground small white circle (this will glow)
         g.append('circle')
-          .attr('r', 3) // Smaller white dot
+          .attr('r', 3)
           .attr('fill', '#FFFFFF')
-          .attr('class', 'node-circle'); // Add the node-circle class for glow
+          .attr('class', 'node-circle');
       } else if (isTopLevelNode(d)) {
-        // Main node styling
         g.append('circle')
-          .attr('r', 7) // Larger radius for main node
-          .attr('fill', graphBackground) // Background color
-          .attr('stroke', '#000000') // Black stroke
-          .attr('stroke-width', 3) // Thin black border
-          .attr('class', 'node-circle'); // Add the node-circle class for glow
+          .attr('r', 7)
+          .attr('fill', graphBackground)
+          .attr('stroke', '#000000')
+          .attr('stroke-width', 3)
+          .attr('class', 'node-circle');
       } else {
-        // Leaf nodes
         const nodeStyle = getNodeStyle(d);
     
         g.append('circle')
@@ -367,16 +316,85 @@ const GraphComponent = ({
           .attr('fill', nodeStyle.fill)
           .attr('stroke', nodeStyle.stroke)
           .attr('stroke-width', 2)
-          .attr('class', 'node-circle'); // Add the node-circle class for glow
+          .attr('class', 'node-circle');
     
         g.append('circle')
           .attr('r', nodeStyle.innerRadius)
           .attr('fill', graphBackground);
       }
+    
+      // Shared position settings
+      const verticalOffset = -22; // Offset for title above the node
+      const rectPadding = 4;
+      const lineNumberPadding = 25; // Increase for more distance along X-axis
+      const rectHeight = 15;
+      const xAdjustment = 4; // Additional X-axis adjustment for line number
+      const yAdjustment = 15; // Y-axis adjustment to lower the rectangle and text
+    
+      // Add title for all nodes
+      const titleText = g.append('text')
+        .text(d.name)
+        .attr('text-anchor', 'start')
+        .attr('dominant-baseline', 'central')
+        .attr('transform', `translate(${verticalOffset + 20}, ${verticalOffset}) rotate(-45)`)
+        .attr('font-weight', 'bold')
+        .style('user-select', 'none') // Disable text selection
+        .style('fill', graphTextcolor)
+        .style('font-size', '15px')
+        .style('font-family', 'EB Garamond, serif');
+    
+      // Add background rectangle for title
+      const titleBBox = titleText.node().getBBox();
+      g.insert('rect', 'text')
+        .attr('x', titleBBox.x - rectPadding)
+        .attr('y', titleBBox.y - rectPadding / 2)
+        .attr('width', titleBBox.width + 2 * rectPadding)
+        .attr('height', titleBBox.height + rectPadding)
+        .attr('transform', `translate(${verticalOffset + 20}, ${verticalOffset}) rotate(-45)`)
+        .attr('rx', 5)
+        .attr('ry', 5)
+        .attr('fill', graphBackground)
+        .style('opacity', 0.8);
+    
+      // Add line number for leaf nodes
+      if (isLeafNode(d)) {
+        // Keep a static counter for leaf nodes
+        if (typeof window.leafCounter === 'undefined') {
+          window.leafCounter = 0; // Initialize the counter if not defined
+        }
+    
+        const lineNumber = window.leafCounter++; // Increment the counter for each leaf node
+        const lineRectWidth = 20;
+    
+        // Line number rectangle
+        g.append('rect')
+          .attr('x', verticalOffset + titleBBox.width + lineNumberPadding + xAdjustment)
+          .attr('y', verticalOffset + yAdjustment)
+          .attr('width', lineRectWidth)
+          .attr('height', rectHeight)
+          .attr('rx', 3)
+          .attr('ry', 3)
+          .attr('transform', `translate(${verticalOffset + 20}, ${verticalOffset}) rotate(-45)`)
+          .attr('fill', getNodeColor(d));
+    
+        // Line number text
+        g.append('text')
+          .text(lineNumber)
+          .attr('x', verticalOffset + titleBBox.width + lineNumberPadding + xAdjustment + lineRectWidth / 2)
+          .attr('y', verticalOffset + rectHeight / 2 + yAdjustment + 1)
+          .attr('transform', `translate(${verticalOffset + 20}, ${verticalOffset}) rotate(-45)`)
+          .attr('dominant-baseline', 'middle')
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#FFFFFF')
+          .style('font-size', '12px')
+          .style('font-family', 'EB Garamond, serif')
+          .style('user-select', 'none'); // Disable text selection
+      }
     });
     
     
     
+
 
     node.each(function (d) {
       if (d.children && d.children.length > 0) {
@@ -512,7 +530,7 @@ const GraphComponent = ({
             if (!node.fx && !node.fy) { // Skip fixed nodes
               const nearestX = Math.round(node.x / gridSpacing) * gridSpacing;
               const nearestY = Math.round(node.y / gridSpacing) * gridSpacing;
-    
+
               // Slowly nudge the node toward the nearest grid point
               node.vx += (nearestX - node.x) * 0.1 * alpha; // Adjust strength as needed
               node.vy += (nearestY - node.y) * 0.1 * alpha;
@@ -521,7 +539,7 @@ const GraphComponent = ({
         };
       };
     };
-    
+
 
     function dragstarted(event) {
       // Clear any existing timeout to avoid false triggering
@@ -589,13 +607,13 @@ const GraphComponent = ({
 
   const applyGlowEffect = () => {
     const svg = d3.select(svgRef.current);
-  
+
     // Remove the `glow` class from all node circles
     svg.selectAll('.node-circle').classed('glow', false);
-  
+
     if (selectedNode) {
       console.log("Selected Node ID:", selectedNode.id);
-  
+
       svg.selectAll('.node-circle')
         .filter(node => {
           console.log("Comparing:", node.id, selectedNode.id);
@@ -604,8 +622,8 @@ const GraphComponent = ({
         .classed('glow', true);
     }
   };
-  
-  
+
+
 
   const addNode = async () => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
