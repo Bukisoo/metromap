@@ -11,7 +11,6 @@ import { fetchStations, getGeolocation } from './fetchStations';
 const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
 const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M 3 -5 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13 M -8 15 L -10 -10 L 10 -10 L 8 15 Z";
 const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
-const downloadIconPath = "M 0 15 L 13.5 6 L 0 15 L 0 -12 L 0 -12 L 0 15 L -13.5 6 Z M -13.5 -16.5 L 13.5 -16.5"; 
 
 
 const rootStyle = getComputedStyle(document.documentElement);
@@ -60,76 +59,6 @@ const GraphComponent = ({
       createForceDirectedGraph();
     }
   }, [nodes, isEditorVisible]);
-
-  const stripHtmlTags = (html) => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  };
-  
-  const extractBranch = (node) => {
-    const result = {
-      title: node.name,
-      note: stripHtmlTags(node.notes || ''),
-      children: []
-    };
-  
-    if (node.children && node.children.length > 0) {
-      result.children = node.children.map(child => extractBranch(child));
-    }
-  
-    return result;
-  };
-  
-  const findBranchRoot = (nodes, selectedNodeId) => {
-    let branchRoot = null;
-  
-    const traverse = (node) => {
-      if (node.id === selectedNodeId) {
-        branchRoot = node;
-        return true;
-      }
-  
-      if (node.children && node.children.length > 0) {
-        for (let child of node.children) {
-          if (traverse(child)) {
-            branchRoot = node;
-            return true;
-          }
-        }
-      }
-  
-      return false;
-    };
-  
-    nodes.forEach(node => traverse(node));
-  
-    return branchRoot;
-  };
-  
-  const downloadSelectedBranch = () => {
-    if (!selectedNode) return;
-  
-    // Find the root of the branch that contains the selected node
-    const branchRoot = findBranchRoot(nodes, selectedNode.id);
-  
-    if (!branchRoot) return;
-  
-    // Extract the branch
-    const branch = extractBranch(branchRoot);
-  
-    // Convert to JSON
-    const jsonStr = JSON.stringify(branch, null, 2);
-  
-    // Create a blob and trigger the download
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${branchRoot.name}-branch.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
@@ -216,22 +145,6 @@ const GraphComponent = ({
     return flatNodes;
   };
 
-  const logNodeInfo = (nodes) => {
-    nodes.forEach((node) => {
-      console.log(
-        `Node: ${node.name}, Parent: ${node.parent ? node.parent.name : 'None'}, Children: ${node.children ? node.children.length : 0
-        }`
-      );
-      console.log(
-        `Classification: ${isTopLevelNode(node) ? 'Top Level' : isLeafNode(node) ? 'Leaf' : isBranchNode(node) ? 'Branch' : 'Unknown'
-        }`
-      );
-    });
-  };
-
-  // Call logNodeInfo during rendering
-  logNodeInfo(flattenNodes(nodes));
-
   const getLinks = (nodes) => {
     let links = [];
     nodes.forEach(node => {
@@ -267,6 +180,17 @@ const GraphComponent = ({
       });
 
     svg.selectAll('*').remove();
+    svg.append('defs').html(`
+      <filter id="strong-glow" x="-300%" y="-300%" width="800%" height="800%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    `);
+    
 
     const zoomGroup = svg.append('g')
       .attr('class', 'zoom-group')
@@ -411,35 +335,48 @@ const GraphComponent = ({
 
     node.each(function (d) {
       const g = d3.select(this);
-
+    
       // Remove any existing circles to prevent duplication
       g.selectAll('circle').remove();
-
+    
       if (isBranchNode(d)) {
         // Background circle for branch joint
         g.append('circle')
           .attr('r', 5) // Slightly larger radius to fill gaps
-          .attr('fill', getNodeColor(d)); // Use branch color
-
-        // Foreground small white circle
+          .attr('fill', getNodeColor(d));
+    
+        // Foreground small white circle (this will glow)
         g.append('circle')
           .attr('r', 3) // Smaller white dot
-          .attr('fill', '#FFFFFF');
+          .attr('fill', '#FFFFFF')
+          .attr('class', 'node-circle'); // Add the node-circle class for glow
+      } else if (isTopLevelNode(d)) {
+        // Main node styling
+        g.append('circle')
+          .attr('r', 7) // Larger radius for main node
+          .attr('fill', graphBackground) // Background color
+          .attr('stroke', '#000000') // Black stroke
+          .attr('stroke-width', 3) // Thin black border
+          .attr('class', 'node-circle'); // Add the node-circle class for glow
       } else {
-        // Top-level or leaf nodes
+        // Leaf nodes
         const nodeStyle = getNodeStyle(d);
-
+    
         g.append('circle')
           .attr('r', nodeStyle.outerRadius)
           .attr('fill', nodeStyle.fill)
           .attr('stroke', nodeStyle.stroke)
-          .attr('stroke-width', 2);
-
+          .attr('stroke-width', 2)
+          .attr('class', 'node-circle'); // Add the node-circle class for glow
+    
         g.append('circle')
           .attr('r', nodeStyle.innerRadius)
           .attr('fill', graphBackground);
       }
     });
+    
+    
+    
 
     node.each(function (d) {
       if (d.children && d.children.length > 0) {
@@ -507,17 +444,6 @@ const GraphComponent = ({
     undoButtonRoot.render(
       <RetroButton iconPath={undoIconPath} onClick={undoAction} />
     );
-
-    const downloadButton = svg.append('g')
-      .attr('class', 'icon-circle download-button')
-      .attr('transform', `translate(${firstButtonX + 3 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
-
-    const downloadButtonRoot = createRoot(downloadButton.node());
-    downloadButtonRoot.render(<RetroButton iconPath={downloadIconPath} onClick={downloadSelectedBranch} />);
-
 
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
@@ -663,14 +589,23 @@ const GraphComponent = ({
 
   const applyGlowEffect = () => {
     const svg = d3.select(svgRef.current);
+  
+    // Remove the `glow` class from all node circles
     svg.selectAll('.node-circle').classed('glow', false);
-
+  
     if (selectedNode) {
+      console.log("Selected Node ID:", selectedNode.id);
+  
       svg.selectAll('.node-circle')
-        .filter(node => node.id === selectedNode.id)
+        .filter(node => {
+          console.log("Comparing:", node.id, selectedNode.id);
+          return node.id === selectedNode.id;
+        })
         .classed('glow', true);
     }
   };
+  
+  
 
   const addNode = async () => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
@@ -934,6 +869,36 @@ const GraphComponent = ({
 
     return dfs(startNode);
   };
+
+
+  const generateRandomRiverPath = (nodes, width, height) => {
+    const riverPath = [];
+    const numberOfSegments = Math.floor(Math.random() * 5) + 3; // Random segments between 3 and 7
+
+    let x = Math.random() * width * 0.2;  // Start near the left edge
+    let y = Math.random() * height;  // Random vertical start
+
+    for (let i = 0; i < numberOfSegments; i++) {
+      // Move to the right and up/down with a 45° bend
+      const directionX = Math.random() > 0.5 ? 1 : -1;
+      const directionY = Math.random() > 0.5 ? 1 : -1;
+
+      const segmentLengthX = Math.random() * width * 0.2;
+      const segmentLengthY = segmentLengthX * directionY;
+
+      x = Math.min(Math.max(x + segmentLengthX * directionX, 0), width);
+      y = Math.min(Math.max(y + segmentLengthY, 0), height);
+
+      riverPath.push([x, y]);
+    }
+
+    // Smooth the river path using D3 line generator
+    const lineGenerator = d3.line().curve(d3.curveBasis);
+    const pathData = lineGenerator(riverPath);
+
+    return pathData;
+  };
+
 
   return <svg ref={svgRef}></svg>;
 };

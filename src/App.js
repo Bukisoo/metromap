@@ -210,14 +210,14 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
 
 const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onError) => {
   try {
-    // Load the current graph from Google Drive
+    // Step 1: Load the current graph from Google Drive
     const graph = await loadGraph();
 
     if (!graph || !Array.isArray(graph)) {
       throw new Error('Failed to load the graph');
     }
 
-    // Update the specific node in the graph
+    // Step 2: Find and update the specific node in the graph
     const updateNoteInNodes = (nodes) => {
       return nodes.map(node => {
         if (node.id === id) {
@@ -231,17 +231,18 @@ const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onE
 
     const updatedGraph = updateNoteInNodes(graph);
 
-    // Immediately update the local state to reflect changes
-    setNodes(updatedGraph);
+    // Update the local state
+    setNodes(updatedGraph); // This line expects setNodes to be a valid function
 
-    // Save the updated graph back to Google Drive asynchronously
+    // Step 3: Save the updated graph back to Google Drive
     await saveGraph(updatedGraph, setSaveStatus, null, onSuccess);
+
+    console.log("Note update successfully saved to Google Drive.");
   } catch (error) {
     console.error("Error saving note to Google Drive:", error);
     if (onError) onError();
   }
 };
-
 
 
 
@@ -448,39 +449,31 @@ const App = () => {
 
     const updatedNodes = updateNodes(nodes);
 
-    // Immediately update the local state to reflect changes
-    setNodes(updatedNodes);
+    undoStack.current.push({
+      type: 'update_node',
+      previousState: oldNodes,
+      newState: updatedNodes,
+    });
 
-    // Save the note if property is 'notes'
+    setNodes(updatedNodes); // Ensure this function is correctly passed
+
     if (property === 'notes') {
       saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
     } else {
-      // Save the entire graph for other property changes
-      saveGraph(updatedNodes, setSaveStatus)
-        .then(() => {
-          // Update the undo stack only after a successful save
-          undoStack.current.push({
-            type: 'update_node',
-            previousState: oldNodes,
-            newState: updatedNodes,
-          });
-        })
-        .catch(error => {
-          console.error("Error saving graph to Google Drive:", error);
-        });
+      saveGraph(updatedNodes, setSaveStatus);
     }
 
-    // Keep the selected node in sync
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
 
-    // Update the editor content
     setEditorContent(prev => ({
       ...prev,
       [id]: { ...prev[id], [property]: value }
     }));
   };
+
+
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
