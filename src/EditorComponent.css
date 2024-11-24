@@ -68,10 +68,17 @@
   display: none; /* For Chrome, Safari, and Opera */
 }
 
-.editor-title[contentEditable="true"]:empty:before {
-  content: attr(placeholder);
-  color: #999;
+.editor-title:empty:before {
+  content: attr(data-placeholder);
+  color: var(--graph-background);
 }
+
+.editor-title:empty::after {
+  content: '';
+  display: inline-block;
+  width: 0;
+}
+
 
 .editor-title:focus {
   outline: none; /* Remove outline on focus */
@@ -97,6 +104,10 @@
   cursor: pointer;
   transition: transform 0.2s ease;
   background-color: var(--accent-color); /* Use variable */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /* Hover effect for color pastille */

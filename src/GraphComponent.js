@@ -607,7 +607,7 @@ const GraphComponent = ({
 
       svg.selectAll('.node-circle')
         .filter(node => {
-          console.log("Comparing:", node.id, selectedNode.id);
+          //console.log("Comparing:", node.id, selectedNode.id);
           return node.id === selectedNode.id;
         })
         .classed('glow', true);

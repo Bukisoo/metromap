@@ -262,6 +262,8 @@ const App = () => {
   const [isOffline, setIsOffline] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const [nodeProperties, setNodeProperties] = useState({});
+
 
   useEffect(() => {
     // Handle online/offline events
