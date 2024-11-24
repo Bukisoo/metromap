@@ -228,13 +228,11 @@ const GraphComponent = ({
     .force('collision', d3.forceCollide()
       .radius(d => {
         const titleLength = d.name ? d.name.length * 5 : 0; // Adjust for title width
-        return Math.min(25, 30 + titleLength); // Cap the collision radius to avoid large spacing
+        return Math.min(50, 50 + titleLength); // Cap the collision radius to avoid large spacing
       })
-      .strength(1.8)) // Softer collision force for gentle adjustment
+      .strength(0.4)) // Softer collision force for gentle adjustment
     .alphaDecay(0.05); // Controls how quickly the simulation stabilizes
   
-  
-
     simulationRef.current = simulation;
 
     const linkGroup = zoomGroup.append('g').attr('class', 'links');
