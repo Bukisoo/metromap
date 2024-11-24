@@ -58,7 +58,7 @@ const GraphComponent = ({
     if (svgRef.current) {
       createForceDirectedGraph();
     }
-  }, [nodes, isEditorVisible]);
+  }, [nodes]);
 
   useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
