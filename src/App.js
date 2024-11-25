@@ -553,9 +553,28 @@ const App = () => {
         <>
           <div className="app-title">MetroMap</div>
           {/* Logout Button */}
-          <button className="logout-button" onClick={window.disconnectGhub}>
-            Logout
+          <button
+            className="logout-button"
+            onClick={window.disconnectGhub}
+            title="Disconnect"
+            aria-label="Disconnect"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24" // Adjust size as needed
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="black"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
+
           <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
             <GraphComponent
               nodes={nodes}
