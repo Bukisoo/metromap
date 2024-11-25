@@ -53,12 +53,15 @@ const GraphComponent = ({
   const buttonSize = parseFloat(rootStyle.getPropertyValue('--button-size').trim());
   const buttonSpacing = parseFloat(rootStyle.getPropertyValue('--button-spacing').trim());
   const buttonPadding = parseFloat(rootStyle.getPropertyValue('--button-padding').trim());
+  const nodePositionsRef = useRef({});
 
   useEffect(() => {
     if (svgRef.current) {
       createForceDirectedGraph();
     }
   }, [nodes]);
+
+
 
   useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
@@ -191,7 +194,6 @@ const GraphComponent = ({
       </filter>
     `);
 
-
     const zoomGroup = svg.append('g')
       .attr('class', 'zoom-group')
       .attr('transform', zoomRef.current)
@@ -215,24 +217,38 @@ const GraphComponent = ({
     const flatNodes = flattenNodes(nodes);
     const links = getLinks(nodes).filter(link => link && link.source && link.target);
 
+    // Initialize node positions if not already set
+    flatNodes.forEach(node => {
+      if (!nodePositionsRef.current[node.id]) {
+        nodePositionsRef.current[node.id] = {
+          x: width / 2 + Math.random() * 100 - 50, // Slight random offset
+          y: height / 2 + Math.random() * 100 - 50,
+        };
+      } else {
+        node.x = nodePositionsRef.current[node.id].x;
+        node.y = nodePositionsRef.current[node.id].y;
+      }
+    });
+
+
     const simulation = d3.forceSimulation(flatNodes)
-    .force('link', d3.forceLink(links)
-      .id(d => d.id)
-      .distance(100) // Desired link length
-      .strength(1)) // Strong link constraints
-    .force('charge', d3.forceManyBody()
-      .strength(-500)) // Adjusted repulsion for a tighter layout
-    .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('x', d3.forceX(width / 2).strength(0.05))
-    .force('y', d3.forceY(height / 2).strength(0.05))
-    .force('collision', d3.forceCollide()
-      .radius(d => {
-        const titleLength = d.name ? d.name.length * 5 : 0; // Adjust for title width
-        return Math.min(50, 50 + titleLength); // Cap the collision radius to avoid large spacing
-      })
-      .strength(0.4)) // Softer collision force for gentle adjustment
-    .alphaDecay(0.05); // Controls how quickly the simulation stabilizes
-  
+      .force('link', d3.forceLink(links)
+        .id(d => d.id)
+        .distance(100) // Desired link length
+        .strength(1)) // Strong link constraints
+      .force('charge', d3.forceManyBody()
+        .strength(-400)) // Adjusted repulsion for a tighter layout
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('x', d3.forceX(width / 2).strength(0.05))
+      .force('y', d3.forceY(height / 2).strength(0.05))
+      .force('collision', d3.forceCollide()
+        .radius(d => {
+          const titleLength = d.name ? d.name.length * 5 : 0; // Adjust for title width
+          return Math.min(50, 50 + titleLength); // Cap the collision radius to avoid large spacing
+        })
+        .strength(0.4)) // Softer collision force for gentle adjustment
+      .alphaDecay(0.05); // Controls how quickly the simulation stabilizes
+
     simulationRef.current = simulation;
 
     const linkGroup = zoomGroup.append('g').attr('class', 'links');
@@ -281,16 +297,16 @@ const GraphComponent = ({
 
     node.each(function (d) {
       const g = d3.select(this);
-    
+
       // Remove existing elements to avoid duplication
       g.selectAll('*').remove();
-    
+
       // Circle styling based on node type
       if (isBranchNode(d)) {
         g.append('circle')
           .attr('r', 5)
           .attr('fill', getNodeColor(d));
-    
+
         g.append('circle')
           .attr('r', 3)
           .attr('fill', '#FFFFFF')
@@ -304,19 +320,19 @@ const GraphComponent = ({
           .attr('class', 'node-circle');
       } else {
         const nodeStyle = getNodeStyle(d);
-    
+
         g.append('circle')
           .attr('r', nodeStyle.outerRadius)
           .attr('fill', nodeStyle.fill)
           .attr('stroke', nodeStyle.stroke)
           .attr('stroke-width', 2)
           .attr('class', 'node-circle');
-    
+
         g.append('circle')
           .attr('r', nodeStyle.innerRadius)
           .attr('fill', graphBackground);
       }
-    
+
       // Shared position settings
       const verticalOffset = -22; // Offset for title above the node
       const rectPadding = 4;
@@ -324,7 +340,7 @@ const GraphComponent = ({
       const rectHeight = 15;
       const xAdjustment = 4; // Additional X-axis adjustment for line number
       const yAdjustment = 15; // Y-axis adjustment to lower the rectangle and text
-    
+
       // Add title for all nodes
       const titleText = g.append('text')
         .text(d.name)
@@ -336,7 +352,7 @@ const GraphComponent = ({
         .style('fill', graphTextcolor)
         .style('font-size', '15px')
         .style('font-family', 'EB Garamond, serif');
-    
+
       // Add background rectangle for title
       const titleBBox = titleText.node().getBBox();
       g.insert('rect', 'text')
@@ -349,17 +365,17 @@ const GraphComponent = ({
         .attr('ry', 5)
         .attr('fill', graphBackground)
         .style('opacity', 0.8);
-    
+
       // Add line number for leaf nodes
       if (isLeafNode(d)) {
         // Keep a static counter for leaf nodes
         if (typeof window.leafCounter === 'undefined') {
           window.leafCounter = 1; // Initialize the counter if not defined
         }
-    
+
         const lineNumber = window.leafCounter++; // Increment the counter for each leaf node
         const lineRectWidth = 20;
-    
+
         // Line number rectangle
         g.append('rect')
           .attr('x', verticalOffset + titleBBox.width + lineNumberPadding + xAdjustment)
@@ -370,7 +386,7 @@ const GraphComponent = ({
           .attr('ry', 3)
           .attr('transform', `translate(${verticalOffset + 20}, ${verticalOffset}) rotate(-45)`)
           .attr('fill', getNodeColor(d));
-    
+
         // Line number text
         g.append('text')
           .text(lineNumber)
@@ -386,7 +402,7 @@ const GraphComponent = ({
       }
     });
     window.leafCounter = 1;
-    
+
     node.each(function (d) {
       if (d.children && d.children.length > 0) {
         d3.select(this).append('g')
@@ -457,6 +473,11 @@ const GraphComponent = ({
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
       link.attr('d', d => calculateLinkPath(d, width, height));
+
+      // Update the stored positions
+      flatNodes.forEach(node => {
+        nodePositionsRef.current[node.id] = { x: node.x, y: node.y };
+      });
     });
 
     const calculateLinkPath = (d) => {
@@ -584,7 +605,7 @@ const GraphComponent = ({
           if (node.id !== d.id) {
             const dx = node.x - d.x;
             const dy = node.y - d.y;
-            return Math.sqrt(dx * dx + dy * dy) < 60;
+            return Math.sqrt(dx * dx + dy * dy) < 80;
           }
           return false;
         });
