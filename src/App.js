@@ -140,7 +140,19 @@ const loadGraph = async () => {
 
 let saveTimeout;
 
+const sanitizeGraph = (nodes) => {
+  return nodes.map(node => {
+    const { x, y, vx, vy, fx, fy, parent, ...rest } = node; // Destructure to exclude transient properties
+    return {
+      ...rest,
+      children: node.children ? sanitizeGraph(node.children) : []
+    };
+  });
+};
+
 const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) => {
+  const sanitizedGraph = sanitizeGraph(graph); // Remove transient properties
+
   if (saveTimeout) {
     clearTimeout(saveTimeout);
   }
@@ -149,7 +161,7 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
 
   saveTimeout = setTimeout(async () => {
     try {
-      if (!gapi.client || !gapi.client.drive) {
+      if (!gapi.client.drive) {
         console.error("Google Drive API client not initialized.");
         setSaveStatus('error');
         return;
@@ -176,7 +188,7 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
         `\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
         JSON.stringify(metadata) +
         `\r\n--boundary\r\nContent-Type: application/json\r\n\r\n` +
-        JSON.stringify(graph) +
+        JSON.stringify(sanitizedGraph) + // Use sanitizedGraph
         `\r\n--boundary--`;
 
       const requestPath = fileId
@@ -206,6 +218,7 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
     }
   }, 1000);
 };
+
 
 
 const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onError) => {

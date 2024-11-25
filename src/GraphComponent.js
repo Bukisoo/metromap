@@ -130,19 +130,14 @@ const GraphComponent = ({
     }
   };
 
-
-  const flattenNodes = (nodes, parent = null) => {
+  const flattenNodes = (nodes) => {
     let flatNodes = [];
     nodes.forEach(node => {
-      // Add parent reference to the node
-      const nodeWithParent = { ...node, parent };
-
-      // Add the current node to the flat list
-      flatNodes.push(nodeWithParent);
-
-      // Recursively process children
+      // Exclude parent reference
+      const { parent, ...nodeWithoutParent } = node;
+      flatNodes.push(nodeWithoutParent);
       if (node.children && !node.childrenHidden) {
-        flatNodes = flatNodes.concat(flattenNodes(node.children, nodeWithParent));
+        flatNodes = flatNodes.concat(flattenNodes(node.children));
       }
     });
     return flatNodes;
@@ -214,6 +209,71 @@ const GraphComponent = ({
       svg.call(zoom.transform, zoomRef.current);
     }
 
+    // Helper function to identify root nodes
+    const getRootNodeIds = (nodes) => {
+      const childIds = new Set();
+
+      const traverse = (nodeList) => {
+        nodeList.forEach(node => {
+          if (node.children && node.children.length > 0) {
+            node.children.forEach(child => {
+              childIds.add(child.id);
+              traverse([child]); // Recursively traverse children
+            });
+          }
+        });
+      };
+
+      traverse(nodes);
+
+      const rootIds = new Set(nodes.map(node => node.id).filter(id => !childIds.has(id)));
+
+      return rootIds;
+    };
+
+    // Classification functions with logging and correct priority
+    const classifyNodes = (nodes) => {
+      const rootIds = getRootNodeIds(nodes);
+
+      // Define classification functions
+      const isTopLevelNode = (node) => rootIds.has(node.id);
+      const isBranchNode = (node) => node.children && node.children.length > 0;
+      const isLeafNode = (node) => !node.children || node.children.length === 0;
+
+      // Helper function to traverse nodes and log their classifications
+      const traverseAndLog = (nodeList) => {
+        nodeList.forEach(node => {
+          let classification = '';
+
+          // **Reordered Classification: Top Level Node first**
+          if (isTopLevelNode(node)) {
+            classification = 'Top Level Node';
+          } else if (isBranchNode(node)) {
+            classification = 'Branch Node';
+          } else if (isLeafNode(node)) {
+            classification = 'Leaf Node';
+          } else {
+            classification = 'Unknown Classification';
+          }
+
+          // Log the classification
+          console.log(`Node ID: ${node.id}, Name: "${node.name}", Classification: ${classification}`);
+
+          // Recursively traverse child nodes if any
+          if (node.children && node.children.length > 0) {
+            traverseAndLog(node.children);
+          }
+        });
+      };
+
+      // Start traversal and logging from the root nodes
+      traverseAndLog(nodes);
+
+      // Return the classification functions for further use
+      return { isTopLevelNode, isBranchNode, isLeafNode };
+    };
+
+    const { isTopLevelNode, isBranchNode, isLeafNode } = classifyNodes(nodes);
     const flatNodes = flattenNodes(nodes);
     const links = getLinks(nodes).filter(link => link && link.source && link.target);
 
@@ -302,35 +362,40 @@ const GraphComponent = ({
       g.selectAll('*').remove();
 
       // Circle styling based on node type
-      if (isBranchNode(d)) {
-        g.append('circle')
-          .attr('r', 5)
-          .attr('fill', getNodeColor(d));
-
-        g.append('circle')
-          .attr('r', 3)
-          .attr('fill', '#FFFFFF')
-          .attr('class', 'node-circle');
-      } else if (isTopLevelNode(d)) {
+      if (isTopLevelNode(d)) {
+        console.log(`Styling Node ID: ${d.id} as Top Level Node`);
         g.append('circle')
           .attr('r', 7)
           .attr('fill', graphBackground)
           .attr('stroke', '#000000')
           .attr('stroke-width', 3)
           .attr('class', 'node-circle');
-      } else {
+      } else if (isBranchNode(d)) {
+        console.log(`Styling Node ID: ${d.id} as Branch Node`);
+        g.append('circle')
+          .attr('r', 5)
+          .attr('fill', getNodeColor(d));
+    
+        g.append('circle')
+          .attr('r', 3)
+          .attr('fill', '#FFFFFF')
+          .attr('class', 'node-circle');
+      } else if (isLeafNode(d)) {
+        console.log(`Styling Node ID: ${d.id} as Leaf Node`);
         const nodeStyle = getNodeStyle(d);
-
+    
         g.append('circle')
           .attr('r', nodeStyle.outerRadius)
           .attr('fill', nodeStyle.fill)
           .attr('stroke', nodeStyle.stroke)
           .attr('stroke-width', 2)
           .attr('class', 'node-circle');
-
+    
         g.append('circle')
           .attr('r', nodeStyle.innerRadius)
           .attr('fill', graphBackground);
+      } else {
+        console.log(`Styling Node ID: ${d.id} with Unknown Classification`);
       }
 
       // Shared position settings
@@ -658,35 +723,28 @@ const GraphComponent = ({
       newStationName = availableStations[0];
     }
 
-    const width = 10000;
-    const height = 10000;
     const newNode = {
       id: `node-${Date.now()}`,
       name: newStationName,
       color: accentColor,
       notes: '',
       children: [],
-      x: width / 2,
-      y: height / 2,
       childrenHidden: false
     };
 
-    setNodes(prevNodes => {
-      const updatedNodes = [...prevNodes, newNode];
+    const updatedNodes = [...nodes, newNode];
 
-      undoStack.current.push({
-        type: 'add_node',
-        previousState: oldNodes,
-        newState: updatedNodes,
-      });
-
-      updateGraph(updatedNodes);
-      return updatedNodes;
+    undoStack.current.push({
+      type: 'add_node',
+      previousState: oldNodes,
+      newState: updatedNodes,
     });
+
+    updateGraph(updatedNodes);
 
     if (simulationRef.current) {
       const simulation = simulationRef.current;
-      simulation.nodes(flattenNodes([...nodes, newNode]));
+      simulation.nodes(flattenNodes(updatedNodes));
       simulation.alpha(1).restart();
     }
 
@@ -789,7 +847,7 @@ const GraphComponent = ({
   };
 
   const connectNodes = (sourceNode, targetNode) => {
-    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Save current state
+    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Deep clone for undo
     const currentZoom = zoomRef.current;
 
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
@@ -800,48 +858,57 @@ const GraphComponent = ({
       return;
     }
 
+    // Remove the source node from its current parent
     const removeNodeFromParent = (nodes, nodeToRemove) => {
       return nodes.map(node => ({
         ...node,
-        children: (node.children || []).filter(child => child.id !== nodeToRemove.id).map(child => removeNodeFromParent([child], nodeToRemove)[0])
-      }));
+        children: node.children
+          ? removeNodeFromParent(node.children, nodeToRemove)
+          : []
+      })).filter(node => node.id !== nodeToRemove.id);
     };
 
-    const addNodeToNewParent = (nodes, sourceNode, targetNode) => {
+    // Attach the source node to the target node's children
+    const attachNodeToTarget = (nodes, nodeToAttach, targetId) => {
       return nodes.map(node => {
-        if (node.id === targetNode.id) {
-          const newColor = getNodeColor(targetNode) === accentColor ? getNextColor(usedColors) : getNodeColor(targetNode);
-          const originalColor = getNodeColor(sourceNode);
-          sourceNode = updateNodeAndChildrenColors(sourceNode, newColor, originalColor);
+        if (node.id === targetId) {
           return {
             ...node,
-            children: [...(node.children || []), sourceNode]
+            children: [...(node.children || []), nodeToAttach]
           };
         } else if (node.children) {
           return {
             ...node,
-            children: addNodeToNewParent(node.children, sourceNode, targetNode)
+            children: attachNodeToTarget(node.children, nodeToAttach, targetId)
           };
         }
         return node;
       });
     };
 
-    setNodes(prevNodes => {
-      let updatedNodes = removeNodeFromParent(prevNodes, sourceNode);
-      updatedNodes = addNodeToNewParent(updatedNodes, sourceNode, targetNode);
-      const finalNodes = updatedNodes.filter(node => node.id !== sourceNode.id || node.id === 'main');
+    // Detach source node from its current parent
+    let updatedNodes = removeNodeFromParent(nodes, sourceNode);
 
-      undoStack.current.push({
-        type: 'connect_nodes',
-        previousState: oldNodes,
-        newState: finalNodes,
-      });
+    // Clone the source node to prevent reference duplication
+    const clonedSourceNode = JSON.parse(JSON.stringify(sourceNode));
 
-      updateGraph(finalNodes);
-      return finalNodes;
+    // Optionally, update the color or other properties of the cloned node
+    clonedSourceNode.color = getNodeColor(targetNode) === accentColor ? getNextColor(usedColors) : getNodeColor(targetNode);
+
+    // Attach the cloned source node to the target node
+    updatedNodes = attachNodeToTarget(updatedNodes, clonedSourceNode, targetNode.id);
+
+    // Push the action to the undo stack
+    undoStack.current.push({
+      type: 'connect_nodes',
+      previousState: oldNodes,
+      newState: updatedNodes,
     });
 
+    // Update the graph state and save
+    updateGraph(updatedNodes);
+
+    // Reset zoom if necessary
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
