@@ -36,3 +36,31 @@
     transform: rotate(360deg);
   }
 }
+
+.logout-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: var(--retro-orange);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: var(--retro-orange);
+  transform: translateY(-2px);
+}
+
+.logout-button:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+.logout-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--retro-red);
+}

@@ -311,6 +311,17 @@ const App = () => {
           setIsSignedIn(authInstance.isSignedIn.get());
           setIsGapiInitialized(true);
           authInstance.isSignedIn.listen(setIsSignedIn);
+
+          // Expose the disconnect function globally after gapi is initialized
+          window.disconnectGhub = async () => {
+            try {
+              await authInstance.signOut();
+              console.log("Successfully signed out.");
+              window.location.reload(); // Reload the page to return to Landing Page
+            } catch (error) {
+              console.error("Error signing out:", error);
+            }
+          };
         }).catch(error => {
           console.error("Error initializing Google API client:", error);
         });
@@ -541,6 +552,10 @@ const App = () => {
       ) : isGraphLoaded ? (
         <>
           <div className="app-title">MetroMap</div>
+          {/* Logout Button */}
+          <button className="logout-button" onClick={window.disconnectGhub}>
+            Logout
+          </button>
           <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
             <GraphComponent
               nodes={nodes}
