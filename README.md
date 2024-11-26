@@ -4,13 +4,6 @@
 
 - [Project Overview](#project-overview)
 - [Features](#features)
-- [How the Graph Works](#how-the-graph-works)
-- [Editor Functionality](#editor-functionality)
-- [Other Features](#other-features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Privacy Policy](#privacy-policy)
-- [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
 
@@ -42,55 +35,10 @@
 - **Data Persistence:** Loads and saves the graph as JSON data to Google Drive using the Drive API.
 - **Real-Time Updates:** Automatically fetches and persists changes, ensuring your data remains current.
 
-## How the Graph Works
 
-### Node and Link Creation
-- **Hierarchical Structure:** Nodes are categorized as top-level, branch, or leaf nodes based on their position in the hierarchy.
-- **Visual Distinctions:** Nodes feature unique sizes and colors, each containing titles, notes, and unique IDs.
+## License
+This project is licensed under the MIT License.
 
-### Dynamic Layout
-- **Force Simulations:** Employs D3 force simulations to dynamically position nodes and links.
-- **Collision Handling:** Implements repulsion, attraction, and collision forces to prevent node overlap and ensure readability.
-
-### Node Features
-- **Angled Titles:** Titles are displayed at a 45° angle above nodes for clarity.
-- **Line Numbers:** Leaf nodes showcase line numbers within colored rectangles.
-- **Interactive Editing:** Clicking nodes opens the EditorComponent for seamless editing.
-
-### Interactions
-- **Drag-and-Drop:** Manually reposition nodes through intuitive dragging.
-- **Connection Management:** Connect, detach, or reassign nodes within the graph hierarchy.
-
-## Editor Functionality
-
-The **EditorComponent** provides a robust interface for managing node details:
-- **Modify Node Details:** Change the name or notes associated with a node.
-- **Detach Nodes:** Remove a node from its parent, elevating it to a top-level node.
-- **Automatic Saving:** All edits are saved in real-time to Google Drive, ensuring data integrity.
-
-## Other Features
-
-### Grid Background
-- **Visual Organization:** Renders the graph on a grid-like background to enhance visual structure and navigation.
-
-### Simulation Freezing
-- **Smooth Interactions:** Temporarily freezes simulations during actions like toggling the editor to prevent jarring movements.
-
-### Graph Persistence
-- **Consistent State:** Persists node positions and states, maintaining consistency across interactions and page reloads.
-- **Recursive Management:** Utilizes a flattening function to manage hierarchical relationships efficiently.
-
-### Styling
-- **Custom Aesthetics:** Employs custom colors and fonts (e.g., EB Garamond) to maintain a cohesive and visually appealing design.
-- **Collision Handling:** Ensures nodes and titles do not overlap, enhancing readability.
-
-### Customization
-- **Dynamic Node Addition:** Users can add new nodes with predefined or dynamically generated names, such as station names or random selections.
-
-## Installation
-
-Follow these steps to set up the project locally:
-
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/Bukisoo/d3-force-tree-app.git
+## Contact
+For any questions or feedback, please contact:
+Email: lukaspansardi@gmail.com
