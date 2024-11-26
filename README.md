@@ -1,6 +1,6 @@
 # MetroMap
 
-![MetroMap Logo](path/to/logo.svg)
+![MetroMap Logo]([path/to/logo.svg](https://github.com/Bukisoo/metromap/blob/master/public/logo.svg))
 
 ## Table of Contents
 
