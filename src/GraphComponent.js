@@ -997,7 +997,7 @@ const GraphComponent = ({
   };
 
 
-  return <svg ref={svgRef}></svg>;
+  return <svg id="graph-svg" ref={svgRef}></svg>;
 };
 
 export default GraphComponent;

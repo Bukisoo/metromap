@@ -15,10 +15,16 @@
     cursor: pointer;
     transition: transform 0.3s ease; /* Smooth movement */
     mix-blend-mode: multiply; /* Blend mode to create a filter-like effect */
-  }
-  
-  /* Menu panel */
-  .menu {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #FFFFFF; /* White color for "|" */
+    user-select: none; /* Prevent text selection */
+}
+
+/* Menu panel */
+.menu {
     position: absolute;
     top: 0;
     left: 0;
@@ -27,81 +33,216 @@
     background-color: var(--graph-background);
     transition: width 0.3s ease, transform 0.3s ease; /* Smooth transition for expanding */
     z-index: 1000;
-    overflow: hidden; /* Hide the right border when the menu is closed */
-  }
-  
-  /* Expand the menu and move the accent bar on hover or open state */
-  .menu.open {
+    overflow: hidden; /* Hide the content when the menu is closed */
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+    padding: 0; /* Remove padding to align with sharp theme */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Expand the menu */
+.menu.open {
     width: var(--meny-width);
     border-right: 5px solid var(--accent-color); /* Right border using accent color */
-  }
-  
-  /* Move the accent bar along with the menu */
-  .menu.open ~ .accent-bar {
-    transform: translateY(-50%) translateX(var(--meny-width));
-  }
-  
-  /* Hide the border when the menu is not open */
-  .menu {
+}
+
+/* Ensure the menu fully collapses */
+.menu:not(.open) {
+    width: 0;
     border-right: none;
-  }
+}
 
+/* Move the accent bar along with the menu */
+.menu.open ~ .accent-bar {
+    transform: translateY(-50%) translateX(var(--meny-width));
+}
 
-  .search-bar {
+/* Search Container */
+.search-container {
+    position: relative;
     width: 100%;
-    padding: 10px;
-    font-size: 16px;
-    border: none;
-    border-bottom: 1px solid var(--accent-color);
-    background-color: var(--graph-background);
-    color: var(--graph-textcolor);
-  }
-  
-  .search-results {
-    padding: 10px;
-  }
-  
-  .search-result-item {
-    margin-bottom: 10px;
-  }
-  
-  .result-title {
-    font-family: 'EB Garamond', serif;
-    font-weight: 800; /* Default bold weight */
-  }
-  
-  .result-snippet {
-    font-size: 14px;
-    color: var(--graph-textcolor);
-  }
-  
-  .highlight {
-    text-decoration: underline; /* Underline the matching text */
-  }
-  
-  .normal-weight {
-    text-decoration: none; /* Normal text style for non-matching parts */
-  }
+    margin: 0; /* Remove margin to align with sharp theme */
+}
 
-  .menu .search-result-item {
+/* Search Bar Styling */
+.search-bar {
+    width: 100%;
+    padding: 8px 10px; /* Minimal padding for sharp edges */
+    font-size: 16px;
+    font-family: 'EB Garamond', serif; /* Garamond font */
+    border: 2px solid var(--accent-color);
+    border-radius: 0; /* Sharp corners */
+    background-color: var(--accent-color); /* Orange background */
+    color: var(--graph-background); /* White text */
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Placeholder Styling */
+.search-bar::placeholder {
+    color: var(--graph-background); /* White placeholder text */
+    opacity: 1; /* Override default opacity */
+    font-family: 'EB Garamond', serif; /* Garamond font */
+}
+
+/* Remove white border on focus */
+.search-bar:focus {
+
+    outline: none;
+}
+
+/* Search Icon - Removed */
+
+/* Search Results Container */
+.search-results {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(100vh - 100px); /* Adjust based on other elements' heights */
+    padding: 10px; /* Minimal padding */
+    direction: rtl; /* Flip the scrollbar to the left */
+    /* Hide scrollbar */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+}
+
+.search-results > * {
+    direction: ltr; /* Maintain normal text direction */
+}
+
+/* Hide scrollbar for WebKit browsers */
+.search-results::-webkit-scrollbar {
+    display: none; /* WebKit */
+}
+
+/* Search Result Items */
+.search-result-item {
     padding: 10px 0;
-    border-bottom: 1px solid #ccc;
-  }
-  
-  .menu .result-title {
-    font-weight: bold;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.search-result-item:hover {
+    background-color: #f1f1f1;
+    transform: translateX(2px);
+}
+
+.result-title {
+    font-family: 'EB Garamond', serif;
+    font-weight: 800; /* Bold weight */
+    font-size: 16px;
     margin-bottom: 5px;
-  }
-  
-  .menu .result-snippet {
+}
+
+.result-snippet {
     font-size: 14px;
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .highlight {
+    color: var(--graph-textcolor);
+}
+
+/* Highlighted Text */
+.highlight {
     text-decoration: underline;
     font-weight: bold;
-  }
-  
+}
+
+.normal-weight {
+    text-decoration: none;
+    font-weight: normal;
+}
+
+/* No Results and No Input Messages */
+.no-results, .no-input {
+    padding: 20px;
+    text-align: center;
+    color: #000000; /* Change to black */
+    font-size: 14px;
+    font-family: 'EB Garamond', serif; /* Garamond font */
+
+}
+
+.no-results p, .no-input p {
+    margin: 0;
+    user-select: none; /* Prevent text selection */
+}
+
+/* Menu Footer */
+.menu-footer {
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    user-select: none; /* Prevent text selection */
+}
+
+.menu-footer ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-footer li {
+    margin-bottom: 10px;
+}
+
+.menu-footer a {
+    text-decoration: none;
+    color: var(--accent-color);
+    font-family: 'EB Garamond', serif;
+    transition: color 0.2s ease;
+}
+
+.menu-footer a:hover {
+    color: var(--retro-orange-hover);
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .menu.open {
+        width: 70%;
+    }
+
+    .search-bar {
+        font-size: 14px;
+        padding: 6px 8px; /* Adjusted padding for smaller screens */
+    }
+
+    .result-title {
+        font-size: 14px;
+    }
+
+    .result-snippet {
+        font-size: 12px;
+    }
+
+    .menu-footer a {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .menu.open {
+        width: 90%;
+    }
+
+    .search-bar {
+        font-size: 12px;
+        padding: 5px 8px; /* Further reduced padding */
+    }
+
+    .result-title {
+        font-size: 12px;
+    }
+
+    .result-snippet {
+        font-size: 10px;
+    }
+
+    .menu-footer a {
+        font-size: 12px;
+    }
+}

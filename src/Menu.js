@@ -1,3 +1,5 @@
+// Menu.js
+
 import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import * as d3 from 'd3';
@@ -75,8 +77,8 @@ const generateSnippets = (text, query, totalResults) => {
 };
 
 const highlightSearchResults = (results) => {
-    const svg = d3.select('svg'); // Assuming d3 is globally available
-    svg.selectAll('.node-circle').classed('glow', false);
+    const svg = d3.select('#graph-svg'); // Select the Graph's SVG by ID
+    svg.selectAll('.node-circle').classed('glow', false); // Remove existing glows
 
     results.forEach(result => {
         svg.selectAll('.node-circle')
@@ -137,36 +139,97 @@ const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef, setSelectedNode, setIsEd
         toggleMenu();  // Close the menu
     };
 
+    // Click outside to close the menu
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (
+                isMenuOpen &&
+                menuRef.current &&
+                !menuRef.current.contains(event.target) &&
+                !event.target.closest('#graph-svg') // Check if the target is the SVG
+            ) {
+                toggleMenu();
+            }
+        };
+
+        const handleSvgClick = (event) => {
+            if (isMenuOpen && event.target.closest('#graph-svg')) {
+                toggleMenu();
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        const svgElement = document.querySelector('#graph-svg');
+        if (svgElement) svgElement.addEventListener('click', handleSvgClick);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            if (svgElement) svgElement.removeEventListener('click', handleSvgClick);
+        };
+    }, [isMenuOpen, toggleMenu, menuRef]);
+
     return (
         <div
             ref={menuRef}
             className={`menu ${isMenuOpen ? 'open' : ''}`}
         >
-            <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearch}
-                placeholder="Search..."
-                className="search-bar"
-            />
+            <div className="search-container">
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    placeholder="Search your notes..."
+                    className="search-bar"
+                    aria-label="Search your notes"
+                />
+                {/* Uncomment below to use a simple SVG icon */}
+                {/* <span className="search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="var(--accent-color)" viewBox="0 0 16 16">
+                        <path d="M11 6a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"/>
+                        <path fillRule="evenodd" d="M10.442 10.442a1 1 0 0 1-1.415 0L7 8.414l-1.027 1.028a1 1 0 0 1-1.415-1.415L5.586 7l-1.028-1.027a1 1 0 1 1 1.415-1.415L7 5.586l1.027-1.028a1 1 0 1 1 1.415 1.415L8.414 7l1.028 1.027a1 1 0 0 1 0 1.415z"/>
+                    </svg>
+                </span> */}
+            </div>
             <div className="search-results">
-                {searchResults.map((result) => (
-                    <div
-                        key={result.id}
-                        className="search-result-item"
-                        onClick={() => handleResultClick(result)}
-                    >
-                        <div className="result-title">
-                            {highlightMatch(result.name, searchQuery)}
+                {searchResults.length > 0 ? (
+                    searchResults.map((result) => (
+                        <div
+                            key={result.id}
+                            className="search-result-item"
+                            onClick={() => handleResultClick(result)}
+                            tabIndex="0"
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') handleResultClick(result);
+                            }}
+                        >
+                            <div className="result-title">
+                                {highlightMatch(result.name, searchQuery)}
+                            </div>
+                            <div className="result-snippet">
+                                {result.highlightedNotes}
+                            </div>
                         </div>
-                        <div className="result-snippet">
-                            {result.highlightedNotes}
-                        </div>
+                    ))
+                ) : searchQuery ? (
+                    <div className="no-results">
+                        <p>No results found for "<strong>{searchQuery}</strong>".</p>
                     </div>
-                ))}
+                ) : (
+                    <div className="no-input">
+                        <p>Start typing to search your notes.</p>
+                    </div>
+                )}
+            </div>
+            <div className="menu-footer">
+                <ul>
+                    <li><a href="#contact">Contact</a></li>
+                    <li><a href="#settings">Settings</a></li>
+                    <li><a href="#help">Help</a></li>
+                </ul>
             </div>
         </div>
     );
+
 };
 
 export default Menu;
