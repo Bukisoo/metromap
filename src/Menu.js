@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Fuse from 'fuse.js';
 import * as d3 from 'd3';
 import './Menu.css';
-import PrivacyPolicyModal from './PrivacyPolicyModal';
+import { Link } from 'react-router-dom';
 
 const highlightMatch = (text, query) => {
     const words = query.trim().split(/\s+/);
@@ -153,7 +153,6 @@ const Menu = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
     const flatNodes = flattenNodes(nodes);
 
@@ -329,12 +328,9 @@ const Menu = ({
                         </a>
                     </li>
                     <li>
-                        <button
-                            onClick={() => setIsPrivacyModalOpen(true)}
-                            className="footer-button"
-                        >
+                        <Link to="/privacy-policy" className="footer-link">
                             Privacy Policy
-                        </button>
+                        </Link>
                     </li>
                 </ul>
             </div>
@@ -346,11 +342,6 @@ const Menu = ({
                 handleExport={handleExport}
                 handleImport={handleImport}
             />
-
-            {/* Privacy Policy Modal */}
-            {isPrivacyModalOpen && (
-                <PrivacyPolicyModal onClose={() => setIsPrivacyModalOpen(false)} />
-            )}
         </div>
     );
 };

@@ -25,7 +25,7 @@ const LandingPage = ({ onLoginSuccess }) => {
       });
     };
     gapi.load('client:auth2', initClient);
-  }, []);
+  },);
 
   const updateSigninStatus = (isSignedIn) => {
     if (isSignedIn) {
