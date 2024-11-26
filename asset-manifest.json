@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/d3-force-tree-app/static/css/main.164a7db3.css",
-    "main.js": "/d3-force-tree-app/static/js/main.c94549a3.js",
-    "static/js/453.a966daa9.chunk.js": "/d3-force-tree-app/static/js/453.a966daa9.chunk.js",
-    "static/media/illustration.jpg": "/d3-force-tree-app/static/media/illustration.d3ece8bf98e5568d5017.jpg",
-    "static/media/logo.svg": "/d3-force-tree-app/static/media/logo.09927e89175faa7af7dfe5ec73a25728.svg",
-    "index.html": "/d3-force-tree-app/index.html",
-    "main.164a7db3.css.map": "/d3-force-tree-app/static/css/main.164a7db3.css.map",
-    "main.c94549a3.js.map": "/d3-force-tree-app/static/js/main.c94549a3.js.map",
-    "453.a966daa9.chunk.js.map": "/d3-force-tree-app/static/js/453.a966daa9.chunk.js.map"
+    "main.css": "/metromap/static/css/main.373c8fc4.css",
+    "main.js": "/metromap/static/js/main.154614d6.js",
+    "static/js/453.a966daa9.chunk.js": "/metromap/static/js/453.a966daa9.chunk.js",
+    "static/media/illustration.jpg": "/metromap/static/media/illustration.d3ece8bf98e5568d5017.jpg",
+    "static/media/logo.svg": "/metromap/static/media/logo.09927e89175faa7af7dfe5ec73a25728.svg",
+    "index.html": "/metromap/index.html",
+    "main.373c8fc4.css.map": "/metromap/static/css/main.373c8fc4.css.map",
+    "main.154614d6.js.map": "/metromap/static/js/main.154614d6.js.map",
+    "453.a966daa9.chunk.js.map": "/metromap/static/js/453.a966daa9.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.164a7db3.css",
-    "static/js/main.c94549a3.js"
+    "static/css/main.373c8fc4.css",
+    "static/js/main.154614d6.js"
   ]
 }
