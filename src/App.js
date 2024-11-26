@@ -8,6 +8,7 @@ import { gapi } from 'gapi-script';
 import { fetchStations, getGeolocation } from './fetchStations';
 import NoConnectionScreen from './NoConnectionScreen';
 import Menu from './Menu';
+import logo from './logo.svg'; // Replace with your actual logo path
 
 const FILE_NAME = 'MetroMapData.json';
 const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
@@ -551,7 +552,11 @@ const App = () => {
         <LandingPage onLoginSuccess={() => setIsSignedIn(true)} />
       ) : isGraphLoaded ? (
         <>
-          <div className="app-title">MetroMap</div>
+          {/* Logo */}
+          <div className="landing-logo-section">
+            <img src={logo} alt="MetroMap Logo" className="landing-logo" />
+          </div>
+
           {/* Logout Button */}
           <button
             className="logout-button"

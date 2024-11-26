@@ -21,6 +21,7 @@ const colorPalette = [
   rootStyle.getPropertyValue('--retro-yellow').trim(),
   rootStyle.getPropertyValue('--retro-teal').trim(),
   rootStyle.getPropertyValue('--retro-orange').trim(),
+  rootStyle.getPropertyValue('--retro-violet').trim(),
   rootStyle.getPropertyValue('--retro-red').trim()
 ];
 

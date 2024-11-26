@@ -1,11 +1,11 @@
-/* Editor Container Styles */
+/* EditorComponent.css */
 @import url('./variables.css');
 
+/* Editor Container Styles */
 .editor-container {
   position: fixed;
   right: 0;
   top: 0;
-  width: 50%;
   height: 100%;
   background: var(--graph-background); /* Use variable */
   color: var(--editor-background); /* Use variable */
@@ -13,41 +13,60 @@
   display: flex;
   flex-direction: column;
   transform: translateX(100%); /* Start off-screen */
-  transition: transform 0.3s ease-in-out; /* Smooth animation */
+  transition: transform 0.3s ease-in-out, width 0.2s ease; /* Smooth animation and width transition */
   z-index: 1000;
+  overflow: hidden; /* Prevent content overflow */
 }
 
 .editor-container.visible {
   transform: translateX(0); /* Slide in */
 }
 
-/* Add a hidden state for sliding out */
-.editor-container.hidden {
-  transform: translateX(100%); /* Slide out */
+/* Resizer Styles */
+.resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 1001;
 }
 
+.resizer:hover {
+  background: rgba(0, 0, 0, 0.1); /* Visual cue on hover */
+}
+
+/* Editor Content */
 .editor-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%; /* Ensure editor content takes full height */
+  height: 100%;
 }
 
+/* Editor Header */
 .editor-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
+  flex-direction: column; /* Arrange top and bottom rows vertically */
   background: var(--accent-color); /* Use variable */
-  height: 60px;
-  position: relative;
+  padding: 0; /* Removed padding */
 }
 
+/* Top Row: Title and Color Pastilles */
+.editor-top-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 15px; /* Added padding */
+}
+
+/* Editor Title */
 .editor-title {
   flex: 1;
   margin-right: 10px;
   color: var(--graph-background); /* Use variable */
-  font-size: 36px;
+  font-size: 30px; /* Adjust as needed */
   font-weight: 800;
   font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
   display: flex;
@@ -58,14 +77,14 @@
   outline: none; /* Remove focus outline */
   cursor: text;
 
-  /* New properties to handle overflow */
-  white-space: nowrap;      /* Prevent text from wrapping to a new line */
-  overflow-x: scroll;       /* Allow horizontal scrolling */
-  overflow-y: hidden;       /* Hide vertical overflow */
-  text-overflow: ellipsis;  /* Show ellipsis (...) for overflowed text */
+  /* Handle overflow */
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: ellipsis;
 
   /* Hide scrollbar */
-  scrollbar-width: none;    /* For Firefox */
+  scrollbar-width: none; /* For Firefox */
   -ms-overflow-style: none; /* For Internet Explorer and Edge */
 }
 
@@ -78,25 +97,14 @@
   color: var(--graph-background);
 }
 
-.editor-title:empty::after {
-  content: '';
-  display: inline-block;
-  width: 0;
-}
-
-
 .editor-title:focus {
   outline: none; /* Remove outline on focus */
 }
 
-/* Toolbar background */
-.editor-tools {
-  background: var(--accent-color); /* Use variable */
-  padding: 10px;
-  border-radius: 0;
+/* Color Pastille Container */
+.color-pastille-container {
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* Align items to the right */
 }
 
 /* Color Pastilles */
@@ -108,42 +116,18 @@
   border: 2px solid var(--graph-background); /* Use variable */
   cursor: pointer;
   transition: transform 0.2s ease;
-  background-color: var(--accent-color); /* Use variable */
+  background-color: var(--accent-color); /* Default color, overridden inline */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
 
-/* Hover effect for color pastille */
 .color-pastille:hover {
   transform: scale(1.2);
 }
 
-/* Styling for buttons to match the map */
-.detach-node-button, .save-indicator {
-  background: var(--editor-background); /* Use variable */
-  color: var(--graph-background); /* Use variable */
-  margin-left: 10px;
-  font-weight: 800;
-  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
-  text-transform: uppercase;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 0;
-  transition: background 0.2s ease;
-}
-
-/* Hover effect for buttons */
-.detach-node-button:hover, .save-indicator:hover {
-  background: #555; /* Consider creating a new variable for this if reused */
-}
-
-.detach-node-button, .save-indicator {
-  min-width: 120px; /* Adjust this value as needed */
-  text-align: center;
-}
-
+/* Custom Color Pastille */
 .color-pastille.custom-color {
   background: #ddd;
   display: flex;
@@ -157,13 +141,116 @@
 /* Color Picker Popup */
 .color-picker-popup {
   position: absolute;
-  top: 50px; /* Adjust as needed */
-  right: 10px;
+  top: 60px; /* Adjust as needed to position below the header */
+  right: 15px;
   z-index: 2000;
   background: #fff;
   padding: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+}
+
+/* Bottom Row: Quill Toolbar and Buttons */
+.editor-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--accent-color); /* Ensures consistency */
+  /* Removed fixed height to allow growth */
+  /* Added flex-wrap to allow wrapping */
+  flex-wrap: wrap;
+}
+
+/* Quill Toolbar */
+.quill-toolbar {
+  flex: 1;
+  /* Ensure toolbar is visible and not collapsed */
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  align-items: center; /* Center vertically */
+}
+
+/* Style the toolbar buttons */
+.ql-toolbar .ql-formats {
+  margin-right: 10px;
+}
+
+.ql-toolbar button,
+.ql-toolbar select {
+  margin-right: 5px;
+}
+
+/* Editor Buttons */
+.editor-buttons {
+  display: flex;
+  align-items: center;
+  background-color: var(--editor-background); /* Set brown background */
+  height: 100%; /* Span full height of .editor-bottom-row */
+  padding: 0 10px; /* Optional: Add horizontal padding */
+  /* Ensure buttons stretch to full height */
+  align-self: stretch;
+}
+
+/* Detach Node Button */
+.detach-node-button {
+  background: #ff5722; /* Bright contrasting color (e.g., Deep Orange) */
+  color: #ffffff; /* White text for contrast */
+  font-weight: 800;
+  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
+  text-transform: uppercase;
+  border: none;
+  padding: 0 15px; /* Only horizontal padding */
+  border-radius: 4px; /* Slight rounding for better aesthetics */
+  transition: background 0.2s ease;
+  min-width: 120px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none; /* Make text non-selectable */
+  height: 27px; /* Reduced height */
+  display: flex; /* Use Flexbox for centering */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+}
+
+.detach-node-button:hover {
+  background: #e64a19; /* Darker shade on hover */
+}
+
+/* Save Indicator */
+.save-indicator {
+  background: var(--graph-textcolor); /* Use variable */
+  color: var(--graph-background); /* Use variable */
+  border-radius: 4px; /* Slight rounding */
+  font-size: 14px;
+  padding: 0 15px; /* Only horizontal padding */
+  margin-left: 10px;
+  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
+  user-select: none; /* Make text non-selectable */
+  height: 27px; /* Reduced height */
+  display: flex; /* Use Flexbox for centering */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+}
+
+.save-indicator.loading {
+  background: var(--save-indicator-loading); /* Use variable */
+  color: var(--retro-yellow); /* Use variable */
+}
+
+.save-indicator.saving {
+  background: var(--save-indicator-saving); /* Use variable */
+  color: #FFFFFF; /* White - for clear contrast */
+}
+
+.save-indicator.saved {
+  background: var(--save-indicator-saved); /* Use variable */
+  color: #F5FFFA; /* Mint Cream - soft but high contrast */
+}
+
+.save-indicator.error {
+  background: #B22222; /* Firebrick - a bold, intense red */
+  color: #FFFAFA; /* Snow - for clear contrast */
 }
 
 /* Editor Body and Quill Container */
@@ -177,17 +264,28 @@
 
 .quill-container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   background: var(--graph-background); /* Use variable */
   color: var(--graph-textcolor); /* Use variable */
   border: 2px solid var(--editor-background); /* Use variable */
   border-radius: 0;
   box-shadow: none; /* Remove shadow for seamless integration */
-  overflow: auto; 
+  overflow: none; /* Prevent overflow from breaking layout */
 }
 
+.ql-container {
+  flex: 1;
+  font-size: 14px;
+  /* Removed fixed height to allow flex growth */
+  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
+  overflow: none; /* Enable scrolling within editor */
+}
+
+/* Quill Toolbar Styling */
 .ql-toolbar {
   background: var(--editor-background); /* Use variable */
-  border-bottom: 2px solid var(--editor-accent); /* Use variable */
+  border-bottom: 2px solid var(--accent-color); /* Use variable */
 }
 
 .ql-picker-item {
@@ -227,6 +325,7 @@
 
 .ql-toolbar.ql-snow {
   border: none;
+  height: 100%;
 }
 
 .ql-toolbar button {
@@ -238,7 +337,8 @@
   width: 100%;
 }
 
-.ql-editor th, .ql-editor td {
+.ql-editor th,
+.ql-editor td {
   border: 1px solid #ddd;
   padding: 8px;
 }
@@ -249,36 +349,27 @@
 }
 
 /* Custom Scrollbar */
-.quill-container::-webkit-scrollbar {
-  width: 12px;
+.editor-body::-webkit-scrollbar {
+  width: 6px;
 }
 
-.quill-container::-webkit-scrollbar-track {
-  background: var(--graph-textcolor); /* Use variable */
+.editor-body::-webkit-scrollbar-track {
+  background: var(--grid-color); /* Use variable */
 }
 
-.quill-container::-webkit-scrollbar-thumb {
-  background-color: var(--retro-orange); /* Use variable */
-  border: 3px solid var(--graph-textcolor); /* Use variable */
+.editor-body::-webkit-scrollbar-thumb {
+  background-color: var(--graph-textcolor); /* Use variable */
 }
 
 .ql-container {
+  /* Removed fixed height */
+  flex: 1;
+  overflow: auto;
   font-size: 14px;
-  height: calc(100% - 42px); /* Adjust to ensure it fits within the editor body */
   font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
 }
 
-.loading-indicator {
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 10px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-/* Loading bar styles */
+/* Loading Bar */
 .loading-bar {
   height: 0; /* Default height is 0 */
   background: var(--editor-accent); /* Use variable */
@@ -289,32 +380,62 @@
   height: 5px; /* Set height when active */
 }
 
-/* Save Indicator */
-.save-indicator {
-  background: var(--graph-textcolor); /* Use variable */
-  color: var(--graph-background); /* Use variable */
-  border-radius: 0;
-  font-size: 14px;
-  padding: 7px 15px;
-  margin-left: 10px;
-}
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .editor-header {
+    padding: 0; /* Already removed */
+  }
 
-.save-indicator.loading {
-  background: var(--save-indicator-loading); /* Use variable */
-  color: var(--accent-color); /* Use variable */
-}
+  .editor-top-row {
+    padding: 10px 15px; /* Already set */
+  }
 
-.save-indicator.saving {
-  background: var(--save-indicator-saving); /* Use variable */
-  color: #FFFFFF; /* White - for clear contrast */
-}
+  .editor-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-.save-indicator.saved {
-  background: var(--save-indicator-saved); /* Use variable */
-  color: #F5FFFA; /* Mint Cream - soft but high contrast */
-}
+  .editor-title {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 10px;
+    font-size: 20px; /* Smaller font for smaller screens */
+  }
 
-.save-indicator.error {
-  background: #B22222; /* Firebrick - a bold, intense red */
-  color: #FFFAFA; /* Snow - for clear contrast */
+  .color-pastille-container {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .editor-bottom-row {
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: var(--editor-background); /* Ensure background remains brown */
+    height: auto; /* Allow height to adjust */
+  }
+
+  .quill-toolbar {
+    width: 100%;
+    margin-bottom: 10px;
+    /* Center toolbar items vertically */
+    align-items: center;
+  }
+
+  .editor-buttons {
+    width: 100%;
+    justify-content: flex-start;
+    background-color: var(--editor-background); /* Ensure brown background remains */
+    height: auto; /* Adjust height for stacked layout */
+    gap: 10px; /* Add space between buttons */
+  }
+
+  .detach-node-button,
+  .save-indicator {
+    margin-left: 0;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    height: 40px; /* Ensure same height */
+    padding-top: 0; /* Remove vertical padding */
+    padding-bottom: 0; /* Remove vertical padding */
+  }
 }

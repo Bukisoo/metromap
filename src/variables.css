@@ -25,13 +25,18 @@
   --retro-yellow: #F7D038;
   --retro-teal: #4DB1A1;
   --retro-orange: #F56A35;
-  --retro-red: #E94A5C;*/
-  --retro-blue: #94a33d;
-  --retro-pink: #ffb492;
+  --retro-red: #E94A5C;
+  #E0607E
+  #808080
+  */  
+  --retro-pink: #E0607E;
   --retro-yellow: #ffa517;
+  --retro-blue: #94a33d;
   --retro-teal: #81c7a1;
-  --retro-orange: #ff6347;
+  --retro-orange: #6C6EA0;
+  --retro-violet: #B594B6;
   --retro-red: #a52325 ;
+  --retro-green : #808080 ;
 
   --meny-width: 400px;
 }
