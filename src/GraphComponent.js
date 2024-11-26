@@ -7,11 +7,9 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import { fetchStations, getGeolocation } from './fetchStations';
 
-
 const addIconPath = "M -19 0 L -19 0 L 0 0 L 0 -19 L 0 -19 L 0 0 L 19 0 L 19 0 L 0 0 L 0 19 L 0 19 L 0 0 L -19 0 Z";
 const binIconPath = "M -10 -10 L -8 15 L 8 15 L 10 -10 M 3 -5 M -15 -10 L -15 -13 L 15 -13 L 15 -10 M -5 -13 L -5 -15 L 5 -15 L 5 -13 M -8 15 L -10 -10 L 10 -10 L 8 15 Z";
 const undoIconPath = " M -12 -15 L -21 -12 L -18 -3 L -15 -9 L 22 3 L 12 15 L -20 15 L 12 15 L 22 3 L -15 -9 L -12 -15 Z";
-
 
 const rootStyle = getComputedStyle(document.documentElement);
 
@@ -61,8 +59,6 @@ const GraphComponent = ({
       createForceDirectedGraph();
     }
   }, [nodes]);
-
-
 
   useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
@@ -258,7 +254,7 @@ const GraphComponent = ({
           }
 
           // Log the classification
-          console.log(`Node ID: ${node.id}, Name: "${node.name}", Classification: ${classification}`);
+          //console.log(`Node ID: ${node.id}, Name: "${node.name}", Classification: ${classification}`);
 
           // Recursively traverse child nodes if any
           if (node.children && node.children.length > 0) {
@@ -290,7 +286,6 @@ const GraphComponent = ({
         node.y = nodePositionsRef.current[node.id].y;
       }
     });
-
 
     const simulation = d3.forceSimulation(flatNodes)
       .force('link', d3.forceLink(links)
@@ -364,7 +359,7 @@ const GraphComponent = ({
 
       // Circle styling based on node type
       if (isTopLevelNode(d)) {
-        console.log(`Styling Node ID: ${d.id} as Top Level Node`);
+        //console.log(`Styling Node ID: ${d.id} as Top Level Node`);
         g.append('circle')
           .attr('r', 7)
           .attr('fill', graphBackground)
@@ -372,31 +367,31 @@ const GraphComponent = ({
           .attr('stroke-width', 3)
           .attr('class', 'node-circle');
       } else if (isBranchNode(d)) {
-        console.log(`Styling Node ID: ${d.id} as Branch Node`);
+        //console.log(`Styling Node ID: ${d.id} as Branch Node`);
         g.append('circle')
           .attr('r', 5)
           .attr('fill', getNodeColor(d));
-    
+
         g.append('circle')
           .attr('r', 3)
           .attr('fill', '#FFFFFF')
           .attr('class', 'node-circle');
       } else if (isLeafNode(d)) {
-        console.log(`Styling Node ID: ${d.id} as Leaf Node`);
+        //console.log(`Styling Node ID: ${d.id} as Leaf Node`);
         const nodeStyle = getNodeStyle(d);
-    
+
         g.append('circle')
           .attr('r', nodeStyle.outerRadius)
           .attr('fill', nodeStyle.fill)
           .attr('stroke', nodeStyle.stroke)
           .attr('stroke-width', 2)
           .attr('class', 'node-circle');
-    
+
         g.append('circle')
           .attr('r', nodeStyle.innerRadius)
           .attr('fill', graphBackground);
       } else {
-        console.log(`Styling Node ID: ${d.id} with Unknown Classification`);
+        //console.log(`Styling Node ID: ${d.id} with Unknown Classification`);
       }
 
       // Shared position settings
@@ -618,7 +613,6 @@ const GraphComponent = ({
       };
     };
 
-
     function dragstarted(event) {
       // Clear any existing timeout to avoid false triggering
       if (dragTimeoutRef.current) {
@@ -690,7 +684,7 @@ const GraphComponent = ({
     svg.selectAll('.node-circle').classed('glow', false);
 
     if (selectedNode) {
-      console.log("Selected Node ID:", selectedNode.id);
+      //console.log("Selected Node ID:", selectedNode.id);
 
       svg.selectAll('.node-circle')
         .filter(node => {
@@ -700,8 +694,6 @@ const GraphComponent = ({
         .classed('glow', true);
     }
   };
-
-
 
   const addNode = async () => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
@@ -733,6 +725,19 @@ const GraphComponent = ({
       childrenHidden: false
     };
 
+    // Compute barycenter of existing nodes
+    const flatNodesList = flattenNodes(nodes);
+    const totalNodes = flatNodesList.length;
+    const sumX = flatNodesList.reduce((sum, node) => sum + (nodePositionsRef.current[node.id]?.x || 0), 0);
+    const sumY = flatNodesList.reduce((sum, node) => sum + (nodePositionsRef.current[node.id]?.y || 0), 0);
+    const barycenterX = totalNodes > 0 ? sumX / totalNodes : 5000; // Default to center if no nodes
+    const barycenterY = totalNodes > 0 ? sumY / totalNodes : 5000;
+
+    // Assign new node's position to the barycenter
+    nodePositionsRef.current[newNode.id] = { x: barycenterX, y: barycenterY };
+    newNode.x = barycenterX;
+    newNode.y = barycenterY;
+
     const updatedNodes = [...nodes, newNode];
 
     undoStack.current.push({
@@ -752,8 +757,6 @@ const GraphComponent = ({
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
-
-
 
   // Helper function to get geolocation
   const getGeolocation = () => {
@@ -850,15 +853,15 @@ const GraphComponent = ({
   const connectNodes = (sourceNode, targetNode) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes)); // Deep clone for undo
     const currentZoom = zoomRef.current;
-
+  
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
-
+  
     // Check if connecting these nodes would create a cycle
     if (createsCycle(sourceNode, targetNode, nodes)) {
       alert('This connection would create a circular relationship and is not allowed.');
       return;
     }
-
+  
     // Remove the source node from its current parent
     const removeNodeFromParent = (nodes, nodeToRemove) => {
       return nodes.map(node => ({
@@ -868,7 +871,7 @@ const GraphComponent = ({
           : []
       })).filter(node => node.id !== nodeToRemove.id);
     };
-
+  
     // Attach the source node to the target node's children
     const attachNodeToTarget = (nodes, nodeToAttach, targetId) => {
       return nodes.map(node => {
@@ -886,33 +889,40 @@ const GraphComponent = ({
         return node;
       });
     };
-
+  
     // Detach source node from its current parent
     let updatedNodes = removeNodeFromParent(nodes, sourceNode);
-
+  
     // Clone the source node to prevent reference duplication
-    const clonedSourceNode = JSON.parse(JSON.stringify(sourceNode));
-
-    // Optionally, update the color or other properties of the cloned node
+    let clonedSourceNode = JSON.parse(JSON.stringify(sourceNode));
+  
+    // Store the original color of the parent node
+    const originalColor = clonedSourceNode.color;
+  
+    // Update the color of the parent node to match the target node
     clonedSourceNode.color = getNodeColor(targetNode) === accentColor ? getNextColor(usedColors) : getNodeColor(targetNode);
-
+  
+    // Update the colors of children that match the original color
+    clonedSourceNode = updateNodeAndChildrenColors(clonedSourceNode, clonedSourceNode.color, originalColor);
+  
     // Attach the cloned source node to the target node
     updatedNodes = attachNodeToTarget(updatedNodes, clonedSourceNode, targetNode.id);
-
+  
     // Push the action to the undo stack
     undoStack.current.push({
       type: 'connect_nodes',
       previousState: oldNodes,
       newState: updatedNodes,
     });
-
+  
     // Update the graph state and save
     updateGraph(updatedNodes);
-
+  
     // Reset zoom if necessary
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
+  
 
   const createsCycle = (sourceNode, targetNode, nodes) => {
     // Temporarily add the edge from sourceNode to targetNode and check for a cycle
@@ -967,36 +977,6 @@ const GraphComponent = ({
 
     return dfs(startNode);
   };
-
-
-  const generateRandomRiverPath = (nodes, width, height) => {
-    const riverPath = [];
-    const numberOfSegments = Math.floor(Math.random() * 5) + 3; // Random segments between 3 and 7
-
-    let x = Math.random() * width * 0.2;  // Start near the left edge
-    let y = Math.random() * height;  // Random vertical start
-
-    for (let i = 0; i < numberOfSegments; i++) {
-      // Move to the right and up/down with a 45° bend
-      const directionX = Math.random() > 0.5 ? 1 : -1;
-      const directionY = Math.random() > 0.5 ? 1 : -1;
-
-      const segmentLengthX = Math.random() * width * 0.2;
-      const segmentLengthY = segmentLengthX * directionY;
-
-      x = Math.min(Math.max(x + segmentLengthX * directionX, 0), width);
-      y = Math.min(Math.max(y + segmentLengthY, 0), height);
-
-      riverPath.push([x, y]);
-    }
-
-    // Smooth the river path using D3 line generator
-    const lineGenerator = d3.line().curve(d3.curveBasis);
-    const pathData = lineGenerator(riverPath);
-
-    return pathData;
-  };
-
 
   return <svg id="graph-svg" ref={svgRef}></svg>;
 };
