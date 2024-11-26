@@ -1,70 +1,44 @@
-# Getting Started with Create React App
+# metromap
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Table of Contents
 
-## Available Scripts
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [License](#license)
+- [Contact](#contact)
 
-In the project directory, you can run:
+## Project Overview
 
-### `npm start`
+**MetroMap** is an interactive graph visualization tool that allows users to create, modify, and interact with hierarchical or networked graphs of nodes. Leveraging powerful libraries like D3.js and integrating seamlessly with Google Drive, MetroMap ensures that your data is always up-to-date and securely stored.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### GraphComponent
+- **Dynamic Rendering:** Utilizes D3.js to render interactive graphs with force-directed layouts.
+- **User Interaction:** Supports dragging nodes, clicking nodes to open an editor, and modifying connections.
+- **Visual Customization:** Nodes and links feature customizable colors, titles, and line numbers.
 
-### `npm test`
+### EditorComponent
+- **In-Place Editing:** Opens a text editor when a node is clicked, allowing users to update the node's title or notes.
+- **Node Management:** Includes functionality to detach nodes, making them top-level entities.
+- **Automatic Saving:** Changes are automatically saved to Google Drive, ensuring data persistence.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Menu/Search Features
+- **Search Functionality:** Quickly locate specific nodes within the graph.
+- **Graph Controls:** Access controls for adding nodes, undoing actions, and other graph interactions.
 
-### `npm run build`
+### Undo Stack
+- **Change Tracking:** Maintains a history of changes (e.g., adding/removing nodes, editing properties) to support undo functionality.
+- **Limited History:** Stores the last 10 actions to manage memory efficiently.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Google Drive Integration
+- **Data Persistence:** Loads and saves the graph as JSON data to Google Drive using the Drive API.
+- **Real-Time Updates:** Automatically fetches and persists changes, ensuring your data remains current.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## License
+This project is licensed under the MIT License.
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Contact
+For any questions or feedback, please contact:
+Email: lukaspansardi@gmail.com
