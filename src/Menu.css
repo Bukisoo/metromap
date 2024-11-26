@@ -87,11 +87,10 @@
 
 /* Remove white border on focus */
 .search-bar:focus {
-
     outline: none;
+    border-color: var(--retro-orange-hover); /* Optional: Change border color on focus */
+    box-shadow: 0 0 5px var(--retro-orange-hover); /* Optional: Add a subtle glow */
 }
-
-/* Search Icon - Removed */
 
 /* Search Results Container */
 .search-results {
@@ -158,7 +157,6 @@
     color: #000000; /* Change to black */
     font-size: 14px;
     font-family: 'EB Garamond', serif; /* Garamond font */
-
 }
 
 .no-results p, .no-input p {
@@ -177,21 +175,112 @@
     list-style: none;
     padding: 0;
     margin: 0;
+    display: flex;
+    justify-content: space-around;
 }
 
 .menu-footer li {
-    margin-bottom: 10px;
+    /* Removed margin-bottom for horizontal layout */
+    margin: 0 10px;
 }
 
-.menu-footer a {
+.footer-link,
+.footer-button {
     text-decoration: none;
     color: var(--accent-color);
     font-family: 'EB Garamond', serif;
     transition: color 0.2s ease;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0;
+    margin: 0;
 }
 
-.menu-footer a:hover {
+.footer-link:hover,
+.footer-button:hover {
     color: var(--retro-orange-hover);
+    text-decoration: underline; /* Optional: Add underline on hover */
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1002; /* Higher than menu */
+}
+
+.modal-content {
+    background: #fff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    width: 300px;
+    max-width: 90%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    font-family: 'EB Garamond', serif;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    font-family: 'EB Garamond', serif;
+}
+
+.modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-button {
+    padding: 10px;
+    background-color: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'EB Garamond', serif;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+.modal-button:hover {
+    background-color: #e67e22; /* Example hover color, adjust as needed */
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: #aaa;
+    transition: color 0.2s ease;
+}
+
+.modal-close-button:hover {
+    color: #000;
+}
+
+/* Highlight Styles */
+.highlight {
+    background-color: yellow;
+    font-weight: bold;
+}
+
+.normal-weight {
+    font-weight: normal;
 }
 
 /* Fade In Animation */
@@ -219,8 +308,17 @@
         font-size: 12px;
     }
 
-    .menu-footer a {
-        font-size: 14px;
+    .menu-footer ul {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .menu-footer li {
+        margin: 5px 0;
+    }
+
+    .modal-content {
+        width: 80%;
     }
 }
 
@@ -242,7 +340,16 @@
         font-size: 10px;
     }
 
-    .menu-footer a {
-        font-size: 12px;
+    .menu-footer ul {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .menu-footer li {
+        margin: 5px 0;
+    }
+
+    .modal-content {
+        width: 90%;
     }
 }

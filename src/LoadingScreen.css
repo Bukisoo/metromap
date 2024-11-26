@@ -1,4 +1,6 @@
 /* src/LoadingScreen.css */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 .loading-screen {
     display: flex;
     flex-direction: column;
@@ -8,27 +10,102 @@
     width: 100vw;
     background-color: var(--graph-background); /* Use existing background color */
     color: black; /* Set text color to black */
+    font-family: 'Press Start 2P', cursive; /* Retro pixelated font */
+    font-size: 24px;
+}
+
+.landing-logo-section {
+    margin-bottom: 40px; /* Space between logo and loading text */
+}
+
+.landing-logo {
+    width: 150px; /* Adjust logo size as needed */
+    height: auto;
+}
+
+/* Loading Text Styling */
+.loading-text {
+    display: flex;
+    align-items: center;
     font-family: 'EB Garamond', serif;
     font-size: 24px;
-  }
-  
-  .spinner {
-    width: 50px;
-    height: 50px;
-    border: 6px solid var(--graph-textcolor); /* Set border color to black */
-    border-top: 6px solid transparent; /* Create a transparent top for the spinner */
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  .loading-text {
-    margin-top: 20px;
-    text-align: center; /* Ensure the text is centered */
-  }
-  
+    color: black; /* Set text color to black */
+}
+
+/* Dots Styling */
+.dots {
+    display: flex;
+    margin-left: 10px; /* Space between text and dots */
+}
+
+.dot {
+    opacity: 1; /* Make dots fully visible */
+    margin-right: 2px;
+    color: black; /* Set dot color to black */
+    font-size: 24px; /* Ensure dots match text size */
+}
+
+/* Spinning Slash Styling */
+.spinner-slash {
+    display: inline-block;
+    margin-left: 10px; /* Space between dots and slash */
+    animation: spin-choppy 1s steps(4, end) infinite;
+    font-weight: bold;
+    color: black; /* Set slash color to black */
+    font-size: 24px; /* Ensure slash matches text size */
+}
+
+/* Choppy Spin Animation for Slash */
+@keyframes spin-choppy {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .landing-logo {
+        width: 120px;
+    }
+
+    .loading-text {
+        font-size: 20px;
+    }
+
+    .dot {
+        margin-right: 1px;
+        font-size: 20px;
+    }
+
+    .spinner-slash {
+        margin-left: 8px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .landing-logo {
+        width: 100px;
+    }
+
+    .loading-text {
+        font-size: 18px;
+    }
+
+    .dot {
+        margin-right: 0.5px;
+        font-size: 18px;
+    }
+
+    .spinner-slash {
+        margin-left: 6px;
+        font-size: 18px;
+    }
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .spinner-slash {
+        animation: none;
+        transform: rotate(0deg); /* Keep slash static */
+    }
+}

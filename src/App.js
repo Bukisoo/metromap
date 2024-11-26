@@ -612,6 +612,7 @@ const App = () => {
           <Menu
             isMenuOpen={isMenuOpen}
             toggleMenu={toggleMenu}
+            setNodes={setNodes}
             nodes={nodes}
             menuRef={menuRef}
             setSelectedNode={setSelectedNode}

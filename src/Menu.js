@@ -1,9 +1,10 @@
 // Menu.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Fuse from 'fuse.js';
 import * as d3 from 'd3';
 import './Menu.css';
+import PrivacyPolicyModal from './PrivacyPolicyModal';
 
 const highlightMatch = (text, query) => {
     const words = query.trim().split(/\s+/);
@@ -87,10 +88,72 @@ const highlightSearchResults = (results) => {
     });
 };
 
+// Modal Component for Settings
+const SettingsModal = ({ isOpen, onClose, handleExport, handleImport }) => {
+    const fileInputRef = useRef(null);
 
-const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef, setSelectedNode, setIsEditorVisible }) => {
+    const triggerFileSelect = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedNodes = JSON.parse(event.target.result);
+                    if (window.confirm("Are you sure you want to replace the current graph with the imported data? This action cannot be undone.")) {
+                        handleImport(importedNodes);
+                        onClose();
+                    }
+                } catch (error) {
+                    alert("Failed to import the file. Please ensure it's a valid JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <h2>Settings</h2>
+                <div className="modal-buttons">
+                    <button onClick={handleExport} className="modal-button">Export</button>
+                    <button onClick={triggerFileSelect} className="modal-button">Import</button>
+                    <input
+                        type="file"
+                        accept=".json"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleFileChange}
+                    />
+                </div>
+                <button onClick={onClose} className="modal-close-button" aria-label="Close Modal">&times;</button>
+            </div>
+        </div>
+    );
+};
+
+const Menu = ({
+    isMenuOpen,
+    toggleMenu,
+    nodes,
+    menuRef,
+    setSelectedNode,
+    setIsEditorVisible,
+    setNodes, // Ensure setNodes is passed as a prop
+    updateGraph
+}) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
     const flatNodes = flattenNodes(nodes);
 
@@ -168,11 +231,30 @@ const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef, setSelectedNode, setIsEd
         };
     }, [isMenuOpen, toggleMenu, menuRef]);
 
+    // Handle Export
+    const handleExport = () => {
+        const dataStr = JSON.stringify(nodes, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'graph_export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Handle Import
+    const handleImport = (importedNodes) => {
+        setNodes(importedNodes);
+        updateGraph(importedNodes);
+    };
+
     return (
         <div
             ref={menuRef}
             className={`menu ${isMenuOpen ? 'open' : ''}`}
         >
+            {/* Search Container */}
             <div className="search-container">
                 <input
                     type="text"
@@ -182,14 +264,10 @@ const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef, setSelectedNode, setIsEd
                     className="search-bar"
                     aria-label="Search your notes"
                 />
-                {/* Uncomment below to use a simple SVG icon */}
-                {/* <span className="search-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="var(--accent-color)" viewBox="0 0 16 16">
-                        <path d="M11 6a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"/>
-                        <path fillRule="evenodd" d="M10.442 10.442a1 1 0 0 1-1.415 0L7 8.414l-1.027 1.028a1 1 0 0 1-1.415-1.415L5.586 7l-1.028-1.027a1 1 0 1 1 1.415-1.415L7 5.586l1.027-1.028a1 1 0 1 1 1.415 1.415L8.414 7l1.028 1.027a1 1 0 0 1 0 1.415z"/>
-                    </svg>
-                </span> */}
+                {/* Optional: Add a search icon if desired */}
             </div>
+
+            {/* Search Results */}
             <div className="search-results">
                 {searchResults.length > 0 ? (
                     searchResults.map((result) => (
@@ -220,16 +298,61 @@ const Menu = ({ isMenuOpen, toggleMenu, nodes, menuRef, setSelectedNode, setIsEd
                     </div>
                 )}
             </div>
+
+            {/* Menu Footer */}
             <div className="menu-footer">
                 <ul>
-                    <li><a href="#contact">Contact</a></li>
-                    <li><a href="#settings">Settings</a></li>
-                    <li><a href="#help">Help</a></li>
+                    <li>
+                        <a
+                            href="mailto:lukaspansardi@gmail.com?subject=Graph%20Application%20Inquiry"
+                            className="footer-link"
+                        >
+                            Contact
+                        </a>
+                    </li>
+                    <li>
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="footer-button"
+                        >
+                            Settings
+                        </button>
+                    </li>
+                    <li>
+                        <a
+                            href="https://buymeacoffee.com/lucaspansardi"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="footer-link"
+                        >
+                            Support me
+                        </a>
+                    </li>
+                    <li>
+                        <button
+                            onClick={() => setIsPrivacyModalOpen(true)}
+                            className="footer-button"
+                        >
+                            Privacy Policy
+                        </button>
+                    </li>
                 </ul>
             </div>
+
+            {/* Existing Modals */}
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                handleExport={handleExport}
+                handleImport={handleImport}
+            />
+
+            {/* Privacy Policy Modal */}
+            {isPrivacyModalOpen && (
+                <PrivacyPolicyModal onClose={() => setIsPrivacyModalOpen(false)} />
+            )}
         </div>
     );
-
 };
 
 export default Menu;
