@@ -1,70 +1,98 @@
-# Getting Started with Create React App
+# MetroMap
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![MetroMap Logo](path/to/logo.svg)
 
-## Available Scripts
+## Table of Contents
 
-In the project directory, you can run:
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [How the Graph Works](#how-the-graph-works)
+- [Editor Functionality](#editor-functionality)
+- [Other Features](#other-features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Privacy Policy](#privacy-policy)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
-### `npm start`
+## Project Overview
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**MetroMap** is an interactive graph visualization tool that allows users to create, modify, and interact with hierarchical or networked graphs of nodes. Leveraging powerful libraries like D3.js and integrating seamlessly with Google Drive, MetroMap ensures that your data is always up-to-date and securely stored.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Features
 
-### `npm test`
+### GraphComponent
+- **Dynamic Rendering:** Utilizes D3.js to render interactive graphs with force-directed layouts.
+- **User Interaction:** Supports dragging nodes, clicking nodes to open an editor, and modifying connections.
+- **Visual Customization:** Nodes and links feature customizable colors, titles, and line numbers.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### EditorComponent
+- **In-Place Editing:** Opens a text editor when a node is clicked, allowing users to update the node's title or notes.
+- **Node Management:** Includes functionality to detach nodes, making them top-level entities.
+- **Automatic Saving:** Changes are automatically saved to Google Drive, ensuring data persistence.
 
-### `npm run build`
+### Menu/Search Features
+- **Search Functionality:** Quickly locate specific nodes within the graph.
+- **Graph Controls:** Access controls for adding nodes, undoing actions, and other graph interactions.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Undo Stack
+- **Change Tracking:** Maintains a history of changes (e.g., adding/removing nodes, editing properties) to support undo functionality.
+- **Limited History:** Stores the last 10 actions to manage memory efficiently.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Google Drive Integration
+- **Data Persistence:** Loads and saves the graph as JSON data to Google Drive using the Drive API.
+- **Real-Time Updates:** Automatically fetches and persists changes, ensuring your data remains current.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## How the Graph Works
 
-### `npm run eject`
+### Node and Link Creation
+- **Hierarchical Structure:** Nodes are categorized as top-level, branch, or leaf nodes based on their position in the hierarchy.
+- **Visual Distinctions:** Nodes feature unique sizes and colors, each containing titles, notes, and unique IDs.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Dynamic Layout
+- **Force Simulations:** Employs D3 force simulations to dynamically position nodes and links.
+- **Collision Handling:** Implements repulsion, attraction, and collision forces to prevent node overlap and ensure readability.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Node Features
+- **Angled Titles:** Titles are displayed at a 45° angle above nodes for clarity.
+- **Line Numbers:** Leaf nodes showcase line numbers within colored rectangles.
+- **Interactive Editing:** Clicking nodes opens the EditorComponent for seamless editing.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Interactions
+- **Drag-and-Drop:** Manually reposition nodes through intuitive dragging.
+- **Connection Management:** Connect, detach, or reassign nodes within the graph hierarchy.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Editor Functionality
 
-## Learn More
+The **EditorComponent** provides a robust interface for managing node details:
+- **Modify Node Details:** Change the name or notes associated with a node.
+- **Detach Nodes:** Remove a node from its parent, elevating it to a top-level node.
+- **Automatic Saving:** All edits are saved in real-time to Google Drive, ensuring data integrity.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Other Features
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Grid Background
+- **Visual Organization:** Renders the graph on a grid-like background to enhance visual structure and navigation.
 
-### Code Splitting
+### Simulation Freezing
+- **Smooth Interactions:** Temporarily freezes simulations during actions like toggling the editor to prevent jarring movements.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Graph Persistence
+- **Consistent State:** Persists node positions and states, maintaining consistency across interactions and page reloads.
+- **Recursive Management:** Utilizes a flattening function to manage hierarchical relationships efficiently.
 
-### Analyzing the Bundle Size
+### Styling
+- **Custom Aesthetics:** Employs custom colors and fonts (e.g., EB Garamond) to maintain a cohesive and visually appealing design.
+- **Collision Handling:** Ensures nodes and titles do not overlap, enhancing readability.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Customization
+- **Dynamic Node Addition:** Users can add new nodes with predefined or dynamically generated names, such as station names or random selections.
 
-### Making a Progressive Web App
+## Installation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Follow these steps to set up the project locally:
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/Bukisoo/d3-force-tree-app.git
