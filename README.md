@@ -1,7 +1,4 @@
-# MetroMap
-
-[![MetroMap Logo](https://github.com/Bukisoo/metromap/blob/master/public/logo.svg)
-
+# metromap
 
 ## Table of Contents
 
