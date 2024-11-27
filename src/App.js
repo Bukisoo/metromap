@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import GraphComponent from './GraphComponent';
 import EditorComponent from './EditorComponent';
 import LandingPage from './LandingPage';
