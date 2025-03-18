@@ -1,5 +1,4 @@
 // EditorComponent.js
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/monokai-sublime.css';
@@ -13,6 +12,19 @@ import './EditorComponent.css';
 if (typeof window !== 'undefined') {
   window.hljs = hljs;
 }
+
+// Override Quill's clipboard to disable image pasting (plain text only)
+const Clipboard = Quill.import('modules/clipboard');
+class PlainClipboard extends Clipboard {
+  onPaste(e) {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    const range = this.quill.getSelection();
+    this.quill.insertText(range.index, text);
+    this.quill.setSelection(range.index + text.length, 0);
+  }
+}
+Quill.register('modules/clipboard', PlainClipboard, true);
 
 const rootStyle = getComputedStyle(document.documentElement);
 const colorOptions = [
@@ -30,71 +42,24 @@ const EditorComponent = ({
   selectedNode,
   updateNodeProperty,
   isOpen,
-  setIsOpen,
-  onNodeChange,
+  setIsEditorVisible,
   handleDetachNode,
+  saveStatus,
+  uploadProgress,
 }) => {
   const editorRef = useRef(null);
-  const toolbarRef = useRef(null); // Ref for Quill toolbar
+  const toolbarRef = useRef(null);
   const quillRef = useRef(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#000000');
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [saveStatus, setSaveStatus] = useState('saved');
   const isInitialLoadRef = useRef(true);
-  const contentModifiedRef = useRef(false);
   const lastLoadedNodeIdRef = useRef(null);
   const titleRef = useRef(null);
 
-  // Resizing state and refs
-  const [editorWidth, setEditorWidth] = useState(50); // Initial width as percentage
+  // Resizer state
+  const [editorWidth, setEditorWidth] = useState(50);
   const resizerRef = useRef(null);
   const isResizing = useRef(false);
-
-  // Function to save content
-  const saveContent = useCallback(
-    (content, nodeId) => {
-      if (nodeId && !isLoading) {
-        setSaveStatus('saving');
-
-        const onSuccess = () => {
-          setSaveStatus('saved');
-        };
-
-        const onError = () => {
-          setSaveStatus('error');
-        };
-
-        updateNodeProperty(nodeId, 'notes', content, onSuccess, onError);
-      }
-    },
-    [updateNodeProperty, isLoading]
-  );
-
-  const debouncedSaveContent = useCallback(
-    debounce((content, nodeId) => saveContent(content, nodeId), 1000),
-    [saveContent]
-  );
-
-  const immediateSaveContent = useCallback(
-    (content, nodeId) => {
-      if (nodeId) {
-        debouncedSaveContent.cancel();
-        saveContent(content, nodeId);
-      }
-    },
-    [debouncedSaveContent, saveContent]
-  );
-
-  const handleTextChange = useCallback(() => {
-    if (!isLoading && !isInitialLoadRef.current) {
-      contentModifiedRef.current = true;
-      const content = quillRef.current.root.innerHTML;
-      setSaveStatus('saving');
-      debouncedSaveContent(content, lastLoadedNodeIdRef.current);
-    }
-  }, [debouncedSaveContent, isLoading]);
 
   const initializeQuill = useCallback(() => {
     if (editorRef.current && !quillRef.current) {
@@ -102,9 +67,9 @@ const EditorComponent = ({
         theme: 'snow',
         modules: {
           toolbar: {
-            container: toolbarRef.current, // Attach toolbar
+            container: toolbarRef.current,
             handlers: {
-              // Add any custom handlers here if needed
+              // No image support.
             },
           },
           syntax: {
@@ -112,10 +77,14 @@ const EditorComponent = ({
           },
         },
       });
-
-      quillRef.current.on('text-change', handleTextChange);
+      quillRef.current.on('text-change', () => {
+        if (!isInitialLoadRef.current && selectedNode) {
+          const content = quillRef.current.root.innerHTML;
+          updateNodeProperty(selectedNode.id, 'notes', content);
+        }
+      });
     }
-  }, [handleTextChange]);
+  }, [selectedNode, updateNodeProperty]);
 
   const formatContentInQuill = useCallback(() => {
     if (quillRef.current) {
@@ -131,20 +100,8 @@ const EditorComponent = ({
   const loadContent = useCallback(
     (content) => {
       if (quillRef.current) {
-        setIsLoading(true);
-        isInitialLoadRef.current = true;
-        setSaveStatus('loading');
-
         const sanitizedContent = DOMPurify.sanitize(content);
         quillRef.current.root.innerHTML = sanitizedContent;
-
-        setLoadingProgress(100);
-        setTimeout(() => {
-          setLoadingProgress(0);
-          setIsLoading(false);
-          setSaveStatus('saved');
-        }, 2000);
-
         requestAnimationFrame(() => {
           formatContentInQuill();
           isInitialLoadRef.current = false;
@@ -156,38 +113,16 @@ const EditorComponent = ({
 
   const cleanupQuill = useCallback(() => {
     if (quillRef.current) {
-      const content = quillRef.current.root.innerHTML;
-      if (
-        contentModifiedRef.current &&
-        content !== '<p><br></p>' &&
-        content.trim() !== ''
-      ) {
-        immediateSaveContent(content, lastLoadedNodeIdRef.current);
-      }
-      quillRef.current.off('text-change', handleTextChange);
+      quillRef.current.off('text-change');
       quillRef.current = null;
-
       isInitialLoadRef.current = true;
       lastLoadedNodeIdRef.current = null;
     }
-  }, [immediateSaveContent, handleTextChange]);
-
-  const confirmLeave = useCallback(
-    (e) => {
-      if (saveStatus === 'saving') {
-        const confirmationMessage =
-          'Your changes are still saving. Are you sure you want to close?';
-        e.returnValue = confirmationMessage;
-        return confirmationMessage;
-      }
-    },
-    [saveStatus]
-  );
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
       initializeQuill();
-
       if (selectedNode && selectedNode.id !== lastLoadedNodeIdRef.current) {
         lastLoadedNodeIdRef.current = selectedNode.id;
         if (titleRef.current) {
@@ -200,22 +135,21 @@ const EditorComponent = ({
       isInitialLoadRef.current = true;
       lastLoadedNodeIdRef.current = null;
     }
-
+    const confirmLeave = (e) => {
+      if (saveStatus === 'saving') {
+        const confirmationMessage =
+          'Your changes are still saving. Are you sure you want to close?';
+        e.returnValue = confirmationMessage;
+        return confirmationMessage;
+      }
+    };
     window.addEventListener('beforeunload', confirmLeave);
     window.addEventListener('close', confirmLeave);
-
     return () => {
       window.removeEventListener('beforeunload', confirmLeave);
       window.removeEventListener('close', confirmLeave);
     };
-  }, [
-    isOpen,
-    selectedNode,
-    initializeQuill,
-    loadContent,
-    cleanupQuill,
-    confirmLeave,
-  ]);
+  }, [isOpen, selectedNode, initializeQuill, loadContent, cleanupQuill, saveStatus]);
 
   const handleTitleChange = () => {
     if (titleRef.current && selectedNode) {
@@ -243,7 +177,7 @@ const EditorComponent = ({
   );
 
   const handleColorPastilleClick = (color) => {
-    if (colorOptions.includes(color)) { // Ensure only allowed colors are used
+    if (colorOptions.includes(color)) {
       setSelectedColor(color);
       if (selectedNode) {
         updateNodeProperty(selectedNode.id, 'color', color);
@@ -255,7 +189,6 @@ const EditorComponent = ({
     setShowColorPicker(!showColorPicker);
   };
 
-  // Resizer Handlers
   const handleMouseDown = (e) => {
     isResizing.current = true;
     document.body.style.cursor = 'col-resize';
@@ -264,15 +197,10 @@ const EditorComponent = ({
   const handleMouseMove = useCallback(
     (e) => {
       if (!isResizing.current) return;
-
-      // Calculate the new width as a percentage
       const appWidth = document.body.clientWidth;
       let newWidth = ((appWidth - e.clientX) / appWidth) * 100;
-
-      // Set minimum and maximum widths
       if (newWidth < 20) newWidth = 20;
       if (newWidth > 80) newWidth = 80;
-
       setEditorWidth(newWidth);
     },
     []
@@ -288,38 +216,19 @@ const EditorComponent = ({
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [handleMouseMove]);
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      debouncedSaveContent.cancel();
-    };
-  }, [debouncedSaveContent]);
-
   if (!selectedNode) return null;
 
   return (
-    <div
-      className={`editor-container ${isOpen ? 'visible' : ''}`}
-      style={{ width: `${editorWidth}%` }} // Dynamic width
-    >
-      {/* Resizer */}
-      <div
-        className="resizer"
-        onMouseDown={handleMouseDown}
-        ref={resizerRef}
-      />
-
+    <div className={`editor-container ${isOpen ? 'visible' : ''}`} style={{ width: `${editorWidth}%` }}>
+      <div className="resizer" onMouseDown={handleMouseDown} ref={resizerRef} />
       <div className="editor-content">
-        {/* Editor Header with Two Rows */}
         <div className="editor-header">
-          {/* Top Row: Title and Color Pastilles */}
           <div className="editor-top-row">
             <div
               className="editor-title"
@@ -339,28 +248,18 @@ const EditorComponent = ({
                   onClick={() => handleColorPastilleClick(color)}
                 />
               ))}
-              <div
-                className="color-pastille custom-color"
-                onClick={toggleColorPicker}
-              >
+              <div className="color-pastille custom-color" onClick={toggleColorPicker}>
                 +
               </div>
               {showColorPicker && (
                 <div className="color-picker-popup">
-                  <SketchPicker
-                    color={selectedColor}
-                    onChangeComplete={handleColorChange}
-                  />
+                  <SketchPicker color={selectedColor} onChangeComplete={handleColorChange} />
                 </div>
               )}
             </div>
           </div>
-
-          {/* Bottom Row: Quill Toolbar and Buttons */}
           <div className="editor-bottom-row">
-            {/* Quill Toolbar */}
             <div className="quill-toolbar" ref={toolbarRef}>
-              {/* Define toolbar buttons here */}
               <span className="ql-formats">
                 <select className="ql-header" defaultValue="">
                   <option value="1">Heading</option>
@@ -377,15 +276,12 @@ const EditorComponent = ({
                 <button className="ql-link"></button>
                 <button className="ql-blockquote"></button>
                 <button className="ql-code-block"></button>
-                <button className="ql-image"></button>
               </span>
               <span className="ql-formats">
                 <button className="ql-list" value="ordered"></button>
                 <button className="ql-list" value="bullet"></button>
               </span>
             </div>
-
-            {/* Buttons */}
             <div className="editor-buttons">
               <button
                 className="detach-node-button"
@@ -398,27 +294,24 @@ const EditorComponent = ({
                 Detach Node
               </button>
               <div className={`save-indicator ${saveStatus}`}>
-                {saveStatus === 'loading' && 'Loading...'}
-                {saveStatus === 'saving' && 'Saving...'}
-                {saveStatus === 'saved' && 'Saved'}
-                {saveStatus === 'error' && 'Error'}
+                {saveStatus === 'saving' ? (
+                  <div className="progress-container">
+                    <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
+                    <span>Saving...</span>
+                  </div>
+                ) : (
+                  saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : ''
+                )}
               </div>
             </div>
           </div>
         </div>
-
-        {/* Editor Body */}
         <div className="editor-body">
           <div className="quill-container">
             <div ref={editorRef}></div>
           </div>
         </div>
-
-        {/* Loading Bar */}
-        <div
-          className={`loading-bar ${loadingProgress > 0 ? 'active' : ''}`}
-          style={{ width: `${loadingProgress}%` }}
-        ></div>
+        <div className={`loading-bar ${uploadProgress > 0 ? 'active' : ''}`} style={{ width: `${uploadProgress}%` }}></div>
       </div>
     </div>
   );

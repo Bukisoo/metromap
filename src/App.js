@@ -1,4 +1,4 @@
-
+// App.js
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import GraphComponent from './GraphComponent';
@@ -12,6 +12,7 @@ import NoConnectionScreen from './NoConnectionScreen';
 import Menu from './Menu';
 import logo from './logo.svg'; // Replace with your actual logo path
 import PrivacyPolicy from './PrivacyPolicy'; // New component
+import debounce from 'lodash/debounce';
 
 const FILE_NAME = 'MetroMapData.json';
 const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
@@ -24,9 +25,6 @@ const initialGraph = (stations) => {
   const retroBlue = rootStyle.getPropertyValue('--retro-blue').trim();
   const retroPink = rootStyle.getPropertyValue('--retro-pink').trim();
   const retroYellow = rootStyle.getPropertyValue('--retro-yellow').trim();
-  const retroTeal = rootStyle.getPropertyValue('--retro-teal').trim();
-  const retroOrange = rootStyle.getPropertyValue('--retro-orange').trim();
-  const retroRed = rootStyle.getPropertyValue('--retro-red').trim();
 
   const defaultStations = [
     'Main Node',
@@ -39,7 +37,10 @@ const initialGraph = (stations) => {
     'Local Station 3'
   ];
 
-  const combinedStations = stations.length > 0 ? stations.concat(defaultStations.slice(stations.length)) : defaultStations;
+  const combinedStations =
+    stations.length > 0
+      ? stations.concat(defaultStations.slice(stations.length))
+      : defaultStations;
 
   return [
     {
@@ -105,8 +106,19 @@ const initialGraph = (stations) => {
   ];
 };
 
+const sanitizeGraph = (nodes) => {
+  return nodes.map((node) => {
+    const { x, y, vx, vy, fx, fy, parent, ...rest } = node;
+    return {
+      ...rest,
+      children: node.children ? sanitizeGraph(node.children) : []
+    };
+  });
+};
+
 const loadGraph = async () => {
   try {
+    console.debug("[LOAD] Fetching graph from GDrive...");
     if (!gapi.client.drive) {
       console.error("Google Drive API client not initialized.");
       return [];
@@ -123,145 +135,27 @@ const loadGraph = async () => {
         alt: 'media',
       });
       const graph = JSON.parse(fileResponse.body);
-
       if (
         !Array.isArray(graph) ||
         (Array.isArray(graph) && graph.length === 0) ||
         (typeof graph === 'object' && Object.keys(graph).length === 0)
       ) {
-        return []; // Return an empty array if the graph is empty
+        console.debug("[LOAD] Graph from GDrive is empty.");
+        return [];
       }
-
+      console.debug("[LOAD] Graph loaded successfully from GDrive.");
+      // Overwrite local storage with remote data.
+      localStorage.setItem(FILE_NAME, JSON.stringify(graph));
       return graph;
     } else {
-      return []; // No existing file, return an empty array to indicate a new graph is needed
+      console.debug("[LOAD] No graph file found on GDrive.");
+      return [];
     }
   } catch (error) {
-    console.error("Error loading graph from Google Drive:", error);
+    console.error("Error loading graph from GDrive:", error);
     return [];
   }
 };
-
-let saveTimeout;
-
-const sanitizeGraph = (nodes) => {
-  return nodes.map(node => {
-    const { x, y, vx, vy, fx, fy, parent, ...rest } = node; // Destructure to exclude transient properties
-    return {
-      ...rest,
-      children: node.children ? sanitizeGraph(node.children) : []
-    };
-  });
-};
-
-const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) => {
-  const sanitizedGraph = sanitizeGraph(graph); // Remove transient properties
-
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-  }
-
-  setSaveStatus('saving');
-
-  saveTimeout = setTimeout(async () => {
-    try {
-      if (!gapi.client.drive) {
-        console.error("Google Drive API client not initialized.");
-        setSaveStatus('error');
-        return;
-      }
-
-      if (!fileId) {
-        const response = await gapi.client.drive.files.list({
-          q: `name='${FILE_NAME}' and trashed=false`,
-          fields: 'files(id, name)',
-        });
-
-        const files = response.result.files;
-        if (files.length > 0) {
-          fileId = files[0].id;
-        }
-      }
-
-      const metadata = {
-        name: FILE_NAME,
-        mimeType: 'application/json',
-      };
-
-      const multipartRequestBody =
-        `\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
-        JSON.stringify(metadata) +
-        `\r\n--boundary\r\nContent-Type: application/json\r\n\r\n` +
-        JSON.stringify(sanitizedGraph) + // Use sanitizedGraph
-        `\r\n--boundary--`;
-
-      const requestPath = fileId
-        ? `/upload/drive/v3/files/${fileId}`
-        : '/upload/drive/v3/files';
-
-      await gapi.client.request({
-        path: requestPath,
-        method: fileId ? 'PATCH' : 'POST',
-        params: { uploadType: 'multipart' },
-        headers: {
-          'Content-Type': 'multipart/related; boundary=boundary',
-        },
-        body: multipartRequestBody,
-      });
-
-      setSaveStatus('saved');
-      console.log("Graph saved to Google Drive.");
-
-      // Call the onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error("Error saving graph to Google Drive:", error);
-      setSaveStatus('error');
-    }
-  }, 1000);
-};
-
-
-
-const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onError) => {
-  try {
-    // Step 1: Load the current graph from Google Drive
-    const graph = await loadGraph();
-
-    if (!graph || !Array.isArray(graph)) {
-      throw new Error('Failed to load the graph');
-    }
-
-    // Step 2: Find and update the specific node in the graph
-    const updateNoteInNodes = (nodes) => {
-      return nodes.map(node => {
-        if (node.id === id) {
-          return { ...node, notes: newNote }; // Update the note for the matching node
-        } else if (node.children) {
-          return { ...node, children: updateNoteInNodes(node.children) }; // Recursively update children
-        }
-        return node;
-      });
-    };
-
-    const updatedGraph = updateNoteInNodes(graph);
-
-    // Update the local state
-    setNodes(updatedGraph); // This line expects setNodes to be a valid function
-
-    // Step 3: Save the updated graph back to Google Drive
-    await saveGraph(updatedGraph, setSaveStatus, null, onSuccess);
-
-    console.log("Note update successfully saved to Google Drive.");
-  } catch (error) {
-    console.error("Error saving note to Google Drive:", error);
-    if (onError) onError();
-  }
-};
-
-
 
 const App = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -273,35 +167,128 @@ const App = () => {
   const [isEditorVisible, setIsEditorVisible] = useState(false);
   const [stations, setStations] = useState([]);
   const [usedColors, setUsedColors] = useState([]);
-  const undoStack = useRef([]); // For storing undo actions
-  const maxUndoActions = 10; // Limit to the last 10 actions
-  const [saveStatus, setSaveStatus] = useState('saved');
+  const undoStack = useRef([]);
+  const maxUndoActions = 10;
+  const [saveStatus, setSaveStatus] = useState('saved'); // Local save status
+  const [uploadProgress, setUploadProgress] = useState(0); // Remote save progress (0-100)
   const [isOffline, setIsOffline] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [nodeProperties, setNodeProperties] = useState({});
 
+  // ----------------------------------------------------------------
+  // Remote Save using XMLHttpRequest with progress tracking.
+  // ----------------------------------------------------------------
+  const pushLocalToGDriveXHR = async () => {
+    console.debug("[REMOTE SAVE] Starting remote save via XHR...");
+    setSaveStatus('saving');
+    setUploadProgress(0);
+    const localData = localStorage.getItem(FILE_NAME);
+    if (!localData) {
+      console.debug("[REMOTE SAVE] No local data found.");
+      return;
+    }
+    try {
+      if (!gapi.client.drive) {
+        console.error("Google Drive API client not initialized.");
+        setSaveStatus('error');
+        return;
+      }
+      let fileId = null;
+      const response = await gapi.client.drive.files.list({
+        q: `name='${FILE_NAME}' and trashed=false`,
+        fields: 'files(id, name)',
+      });
+      const files = response.result.files;
+      if (files.length > 0) {
+        fileId = files[0].id;
+      }
+      const metadata = {
+        name: FILE_NAME,
+        mimeType: 'application/json',
+      };
+      const boundary = "foo_bar_baz";
+      const multipartRequestBody =
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+        JSON.stringify(metadata) +
+        `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+        localData +
+        `\r\n--${boundary}--`;
+      const blob = new Blob([multipartRequestBody], { type: 'multipart/related; boundary=' + boundary });
+      const xhr = new XMLHttpRequest();
+      const url = fileId
+        ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+        : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+      xhr.open(fileId ? "PATCH" : "POST", url);
+      xhr.setRequestHeader("Authorization", "Bearer " + gapi.auth.getToken().access_token);
+      xhr.setRequestHeader("Content-Type", 'multipart/related; boundary=' + boundary);
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percentComplete);
+          console.debug(`[REMOTE SAVE] Progress: ${percentComplete}%`);
+        }
+      };
+      console.time("RemoteSaveDuration");
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          console.debug("[REMOTE SAVE] Remote save completed successfully.");
+          console.timeEnd("RemoteSaveDuration");
+          // Hold full progress for a brief moment (e.g., 1 second) before resetting.
+          setUploadProgress(100);
+          setTimeout(() => {
+            setUploadProgress(0);
+          }, 1000);
+          setSaveStatus('saved');
+        } else {
+          console.error("[REMOTE SAVE] Remote save failed. Status:", xhr.status);
+          setSaveStatus('error');
+        }
+      };
+      xhr.onerror = () => {
+        console.error("[REMOTE SAVE] XHR encountered an error.");
+        setSaveStatus('error');
+      };
+      xhr.send(blob);
+    } catch (error) {
+      console.error("[REMOTE SAVE] Exception during remote save:", error);
+      setSaveStatus('error');
+    }
+  };
 
+  const debouncedPushToRemoteXHR = debounce(pushLocalToGDriveXHR, 1000);
+
+  // ----------------------------------------------------------------
+  // Save Graph: Write to local storage immediately then trigger remote update.
+  // ----------------------------------------------------------------
+  const saveGraph = (graph, onSuccess = null) => {
+    const sanitizedGraph = sanitizeGraph(graph);
+    const startTime = Date.now();
+    localStorage.setItem(FILE_NAME, JSON.stringify(sanitizedGraph));
+    console.debug("[LOCAL SAVE] Graph saved to local storage. Took", Date.now() - startTime, "ms.");
+    setSaveStatus('saved'); // Mark local save as complete immediately
+    debouncedPushToRemoteXHR();
+    if (onSuccess) onSuccess();
+  };
+
+  // ----------------------------------------------------------------
+  // Online/Offline status
+  // ----------------------------------------------------------------
   useEffect(() => {
-    // Handle online/offline events
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Check initial connection status
-    if (!navigator.onLine) {
-      setIsOffline(true);
-    }
-
+    if (!navigator.onLine) setIsOffline(true);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
+  // ----------------------------------------------------------------
   // Initialize Google API client
+  // ----------------------------------------------------------------
   useEffect(() => {
     const initClient = () => {
       gapi.load('client:auth2', () => {
@@ -315,13 +302,11 @@ const App = () => {
           setIsSignedIn(authInstance.isSignedIn.get());
           setIsGapiInitialized(true);
           authInstance.isSignedIn.listen(setIsSignedIn);
-
-          // Expose the disconnect function globally after gapi is initialized
           window.disconnectGhub = async () => {
             try {
               await authInstance.signOut();
               console.log("Successfully signed out.");
-              window.location.reload(); // Reload the page to return to Landing Page
+              window.location.reload();
             } catch (error) {
               console.error("Error signing out:", error);
             }
@@ -331,56 +316,55 @@ const App = () => {
         });
       });
     };
-
     initClient();
   }, []);
 
-  // Load the graph after the user is signed in and Google API is initialized
+  // ----------------------------------------------------------------
+  // Load and initialize graph from GDrive on startup.
+  // ----------------------------------------------------------------
   useEffect(() => {
     const loadAndInitializeGraph = async () => {
       try {
         let fetchedStations = stations;
-
-        // Ensure we have station names before proceeding
         if (stations.length === 0) {
           const { latitude, longitude } = await getGeolocation();
           fetchedStations = await fetchStations(latitude, longitude);
           setStations(fetchedStations);
         }
-
-        // Load the graph
+        // Always load from GDrive on startup (overwrite local storage).
         let graph = await loadGraph();
-
-        // If the graph is empty, initialize it with fetched station names or fallback
         if (graph.length === 0) {
+          console.debug("[INIT] No graph found on GDrive. Creating initial graph.");
           graph = initialGraph(fetchedStations);
-          await saveGraph(graph, setSaveStatus); // Save the newly created graph immediately
+          saveGraph(graph);
         }
-
         setNodes(graph);
-        setIsGraphLoaded(true); // Mark the graph as loaded
+        setIsGraphLoaded(true);
       } catch (error) {
         console.error("Error loading and initializing the graph:", error);
       }
     };
 
     if (isSignedIn && isGapiInitialized && !isGraphLoaded) {
-      loadAndInitializeGraph(); // Only call loadGraph if signed in, gapi is initialized, and graph is not already loaded
+      loadAndInitializeGraph();
     }
   }, [isSignedIn, isGapiInitialized, isGraphLoaded, stations]);
 
-  // Handle undo operation
+  // ----------------------------------------------------------------
+  // Example functions to update graph and node properties.
+  // ----------------------------------------------------------------
+  const updateGraph = (newNodes) => {
+    setNodes(newNodes);
+    saveGraph(newNodes);
+  };
+
   const undoAction = () => {
     if (undoStack.current.length > 0) {
       const lastAction = undoStack.current.pop();
-      console.log("Last action:", lastAction);
-
+      console.log("Undoing last action:", lastAction);
       if (lastAction.previousState) {
-        // Revert to the previous state
         setNodes(lastAction.previousState);
-
-        // Save the reverted state to Google Drive
-        saveGraph(lastAction.previousState, setSaveStatus);
+        saveGraph(lastAction.previousState);
       } else {
         console.warn("No previous state found for this action.");
       }
@@ -389,256 +373,156 @@ const App = () => {
     }
   };
 
-
-  const updateGraph = (newNodes) => {
-    setNodes(newNodes);
-    saveGraph(newNodes, setSaveStatus); // Ensure setSaveStatus is passed here
-  };
-
-  const handleDetachNode = (nodeId) => {
-    console.log(`Starting to detach node: ${nodeId}`);
-
-    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Clone the current state of nodes
-    let nodeToDetach = null;
-
-    // Step 1: Find the node and remove it from its parent
-    const detachNode = (nodes) => {
-      console.log('Traversing nodes:', nodes);
-      return nodes.map(node => {
-        console.log(`Inspecting node: ${node.id}`);
-        if (node.children) {
-          const filteredChildren = node.children.filter(child => {
-            console.log(`Checking child node: ${child.id}`);
-            if (child.id === nodeId) {
-              nodeToDetach = child; // Store the node to detach
-              console.log(`Node to detach found: ${child.id}`);
-              return false; // Remove the child from its parent
-            }
-            return true;
-          });
-
-          // Recursively continue to search in the child nodes
-          const updatedChildren = filteredChildren.map(child => {
-            if (child.children) {
-              return detachNode([child])[0];
-            }
-            return child;
-          });
-
-          return { ...node, children: updatedChildren };
-        }
-        return node;
-      });
-    };
-
-    let updatedNodes = detachNode(nodes);
-
-    // Step 2: If the node was found and detached, add it as a top-level node
-    if (nodeToDetach) {
-      console.log(`Adding node as top-level: ${nodeToDetach.id}`);
-      updatedNodes.push(nodeToDetach);
-    } else {
-      console.log('Node to detach not found or already top-level');
-    }
-
-    // Step 3: Push to undo stack and update state
-    undoStack.current.push({
-      type: 'detach_node',
-      previousState: oldNodes, // Save the old state
-      newState: updatedNodes,  // Save the new state
-    });
-
-    console.log('Updated nodes after detaching:', updatedNodes);
-
-    // Update nodes state
-    setNodes(updatedNodes);
-
-    // Save the updated graph
-    saveGraph(updatedNodes, setSaveStatus);
-
-    console.log('Detachment process complete.');
-  };
-
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
-
-    const updateNodes = (nodes) => {
-      return nodes.map(node => {
+    const updateNodes = (nodes) =>
+      nodes.map((node) => {
         if (node.id === id) {
-          if (property === 'color') {
-            const originalColor = node.color;
-            node = updateNodeAndChildrenColors(node, value, originalColor);
-          }
           return { ...node, [property]: value };
         } else if (node.children) {
           return { ...node, children: updateNodes(node.children) };
         }
         return node;
       });
-    };
-
     const updatedNodes = updateNodes(nodes);
-
     undoStack.current.push({
       type: 'update_node',
       previousState: oldNodes,
       newState: updatedNodes,
     });
-
-    setNodes(updatedNodes); // Ensure this function is correctly passed
-
-    if (property === 'notes') {
-      saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
-    } else {
-      saveGraph(updatedNodes, setSaveStatus);
-    }
-
+    setNodes(updatedNodes);
+    saveGraph(updatedNodes);
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
-
-    setEditorContent(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [property]: value }
-    }));
   };
 
-
-
-  const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
-    const updateColor = (nodes) => {
-      return nodes.map(n => {
-        if (n.color === originalColor) {
-          n.color = newColor;
-          if (n.children) {
-            n.children = updateColor(n.children);
-          }
+  const handleDetachNode = (nodeId) => {
+    console.log(`Detaching node: ${nodeId}`);
+    const oldNodes = JSON.parse(JSON.stringify(nodes));
+    let nodeToDetach = null;
+    const detachNode = (nodes) => {
+      return nodes.map((node) => {
+        if (node.children) {
+          const filteredChildren = node.children.filter((child) => {
+            if (child.id === nodeId) {
+              nodeToDetach = child;
+              return false;
+            }
+            return true;
+          });
+          const updatedChildren = filteredChildren.map((child) => {
+            if (child.children) {
+              return detachNode([child])[0];
+            }
+            return child;
+          });
+          return { ...node, children: updatedChildren };
         }
-        return n;
+        return node;
       });
     };
-
-    node.color = newColor;
-    if (node.children) {
-      node.children = updateColor(node.children);
+    let updatedNodes = detachNode(nodes);
+    if (nodeToDetach) {
+      updatedNodes.push(nodeToDetach);
     }
-    return node;
+    undoStack.current.push({
+      type: 'detach_node',
+      previousState: oldNodes,
+      newState: updatedNodes,
+    });
+    setNodes(updatedNodes);
+    saveGraph(updatedNodes);
   };
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target) &&
-        isMenuOpen &&
-        !event.target.classList.contains('accent-bar') // Prevent closing when clicking on the accent bar
-      ) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
-
 
   return (
     <Router>
-        <div className="app-container">
-            <Routes>
-                <Route path="/" element={
-                    !isSignedIn ? (
-                        <LandingPage onLoginSuccess={() => setIsSignedIn(true)} />
-                    ) : isGraphLoaded ? (
-                        <>
-                            {/* Logo */}
-                            <div className="landing-logo-section">
-                                <img src={logo} alt="MetroMap Logo" className="landing-logo" />
-                            </div>
-
-                            {/* Logout Button */}
-                            <button
-                                className="logout-button"
-                                onClick={window.disconnectGhub}
-                                title="Disconnect"
-                                aria-label="Disconnect"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24" // Adjust size as needed
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="black"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-
-                            <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
-                                <GraphComponent
-                                    nodes={nodes}
-                                    setNodes={setNodes}
-                                    selectedNode={selectedNode}
-                                    setSelectedNode={setSelectedNode}
-                                    editorContent={editorContent}
-                                    setEditorContent={setEditorContent}
-                                    isEditorVisible={isEditorVisible}
-                                    setIsEditorVisible={setIsEditorVisible}
-                                    stations={stations}
-                                    setStations={setStations}
-                                    usedColors={usedColors}
-                                    setUsedColors={setUsedColors}
-                                    updateGraph={updateGraph}
-                                    undoStack={undoStack}
-                                    undoAction={undoAction}
-                                />
-                            </div>
-                            <EditorComponent
-                                selectedNode={selectedNode}
-                                handleDetachNode={handleDetachNode}
-                                updateNodeProperty={updateNodeProperty}
-                                saveStatus={saveStatus}
-                                setNodes={setNodes}
-                                setSaveStatus={setSaveStatus}
-                                isOpen={isEditorVisible}
-                                setIsOpen={setIsEditorVisible}
-                            />
-                            <Menu
-                                isMenuOpen={isMenuOpen}
-                                toggleMenu={toggleMenu}
-                                setNodes={setNodes}
-                                nodes={nodes}
-                                menuRef={menuRef}
-                                setSelectedNode={setSelectedNode}
-                                setIsEditorVisible={setIsEditorVisible}
-                            />
-                            <div
-                                className="accent-bar"
-                                onClick={toggleMenu} // Toggle the menu when clicking on the accent bar
-                            ></div>
-                        </>
-                    ) : (
-                        <LoadingScreen /> // Show a loading message until the graph is loaded
-                    )
-                } />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            </Routes>
-            {isOffline && <NoConnectionScreen />}
-        </div>
+      <div className="app-container">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              !isSignedIn ? (
+                <LandingPage onLoginSuccess={() => setIsSignedIn(true)} />
+              ) : isGraphLoaded ? (
+                <>
+                  <div className="landing-logo-section">
+                    <img src={logo} alt="MetroMap Logo" className="landing-logo" />
+                  </div>
+                  <button
+                    className="logout-button"
+                    onClick={window.disconnectGhub}
+                    title="Disconnect"
+                    aria-label="Disconnect"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="black"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                  <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
+                    <GraphComponent
+                      nodes={nodes}
+                      setNodes={setNodes}
+                      selectedNode={selectedNode}
+                      setSelectedNode={setSelectedNode}
+                      editorContent={editorContent}
+                      setEditorContent={setEditorContent}
+                      isEditorVisible={isEditorVisible}
+                      setIsEditorVisible={setIsEditorVisible}
+                      stations={stations}
+                      setStations={setStations}
+                      usedColors={usedColors}
+                      setUsedColors={setUsedColors}
+                      updateGraph={updateGraph}
+                      undoStack={undoStack}
+                      undoAction={undoAction}
+                    />
+                  </div>
+                  <EditorComponent
+                    selectedNode={selectedNode}
+                    handleDetachNode={handleDetachNode}
+                    updateNodeProperty={updateNodeProperty}
+                    saveStatus={saveStatus}
+                    uploadProgress={uploadProgress}
+                    isOpen={isEditorVisible}
+                    setIsOpen={setIsEditorVisible}
+                  />
+                  <Menu
+                    isMenuOpen={isMenuOpen}
+                    toggleMenu={() => setIsMenuOpen(!isMenuOpen)}
+                    setNodes={setNodes}
+                    nodes={nodes}
+                    menuRef={menuRef}
+                    setSelectedNode={setSelectedNode}
+                    setIsEditorVisible={setIsEditorVisible}
+                  />
+                  <div
+                    className="accent-bar"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  ></div>
+                </>
+              ) : (
+                <LoadingScreen />
+              )
+            }
+          />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        </Routes>
+        {isOffline && <NoConnectionScreen />}
+      </div>
     </Router>
-);
+  );
 };
 
 export default App;
