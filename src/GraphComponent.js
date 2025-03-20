@@ -61,6 +61,23 @@ const GraphComponent = ({
   }, [nodes]);
 
   useEffect(() => {
+    const binButton = d3.select('.bin-button');
+    const binButtonRoot = createRoot(binButton.node());
+    binButtonRoot.render(
+      <RetroButton
+        iconPath={binIconPath}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (selectedNode) {
+            confirmAndRemoveNode(selectedNode);
+          }
+        }}
+      />
+    );
+  }, [selectedNode]);
+  
+
+  useEffect(() => {
     const binButtonElement = d3.select('.bin-button');
 
     if (isDragging) {
@@ -168,11 +185,17 @@ const GraphComponent = ({
       .style('background-image', `radial-gradient(${gridColor} 1px, transparent 1px)`)
       .style('background-size', '20px 20px')
       .style('background-position', '0 0')
-      .on('click', () => {
+      .on('click', (event) => {
+        // If the click occurred on an element with class "icon-circle" (or inside one), do nothing.
+        if (event.target.closest('.icon-circle')) {
+          return;
+        }
+        // Otherwise, close the editor
         setIsEditorVisible(false);
         setSelectedNode(null);
         d3.selectAll('.glow').classed('glow', false);
       });
+      
 
     svg.selectAll('*').remove();
     svg.append('defs').html(`
@@ -517,7 +540,18 @@ const GraphComponent = ({
       .attr('height', 75);
 
     const binButtonRoot = createRoot(binButton.node());
-    binButtonRoot.render(<RetroButton iconPath={binIconPath} onClick={() => { }} />);
+    binButtonRoot.render(
+      <RetroButton
+        iconPath={binIconPath}
+        onClick={() => {
+          if (selectedNode) {
+            confirmAndRemoveNode(selectedNode);
+          }
+        }}
+      />
+    );
+
+
 
     const undoButton = svg.append('g')
       .attr('class', 'icon-circle undo-button')
@@ -853,15 +887,15 @@ const GraphComponent = ({
   const connectNodes = (sourceNode, targetNode) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes)); // Deep clone for undo
     const currentZoom = zoomRef.current;
-  
+
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
-  
+
     // Check if connecting these nodes would create a cycle
     if (createsCycle(sourceNode, targetNode, nodes)) {
       alert('This connection would create a circular relationship and is not allowed.');
       return;
     }
-  
+
     // Remove the source node from its current parent
     const removeNodeFromParent = (nodes, nodeToRemove) => {
       return nodes.map(node => ({
@@ -871,7 +905,7 @@ const GraphComponent = ({
           : []
       })).filter(node => node.id !== nodeToRemove.id);
     };
-  
+
     // Attach the source node to the target node's children
     const attachNodeToTarget = (nodes, nodeToAttach, targetId) => {
       return nodes.map(node => {
@@ -889,40 +923,40 @@ const GraphComponent = ({
         return node;
       });
     };
-  
+
     // Detach source node from its current parent
     let updatedNodes = removeNodeFromParent(nodes, sourceNode);
-  
+
     // Clone the source node to prevent reference duplication
     let clonedSourceNode = JSON.parse(JSON.stringify(sourceNode));
-  
+
     // Store the original color of the parent node
     const originalColor = clonedSourceNode.color;
-  
+
     // Update the color of the parent node to match the target node
     clonedSourceNode.color = getNodeColor(targetNode) === accentColor ? getNextColor(usedColors) : getNodeColor(targetNode);
-  
+
     // Update the colors of children that match the original color
     clonedSourceNode = updateNodeAndChildrenColors(clonedSourceNode, clonedSourceNode.color, originalColor);
-  
+
     // Attach the cloned source node to the target node
     updatedNodes = attachNodeToTarget(updatedNodes, clonedSourceNode, targetNode.id);
-  
+
     // Push the action to the undo stack
     undoStack.current.push({
       type: 'connect_nodes',
       previousState: oldNodes,
       newState: updatedNodes,
     });
-  
+
     // Update the graph state and save
     updateGraph(updatedNodes);
-  
+
     // Reset zoom if necessary
     const svg = d3.select(svgRef.current);
     svg.call(d3.zoom().transform, currentZoom);
   };
-  
+
 
   const createsCycle = (sourceNode, targetNode, nodes) => {
     // Temporarily add the edge from sourceNode to targetNode and check for a cycle
