@@ -290,6 +290,7 @@ const App = () => {
   const [nodeProperties, setNodeProperties] = useState({});
 
 
+
   useEffect(() => {
     // Handle online/offline events
     const handleOnline = () => setIsOffline(false);
@@ -559,94 +560,96 @@ const App = () => {
 
   return (
     <Router>
-        <div className="app-container">
-            <Routes>
-                <Route path="/" element={
-                    !isSignedIn ? (
-                        <LandingPage onLoginSuccess={() => setIsSignedIn(true)} />
-                    ) : isGraphLoaded ? (
-                        <>
-                            {/* Logo */}
-                            <div className="landing-logo-section">
-                                <img src={logo} alt="MetroMap Logo" className="landing-logo" />
-                            </div>
+      <div className="app-container">
+        <Routes>
+          <Route path="/" element={
+            !isSignedIn ? (
+              <LandingPage onLoginSuccess={() => setIsSignedIn(true)} />
+            ) : isGraphLoaded ? (
+              <>
+                {/* Logo */}
+                <div className="landing-logo-section">
+                  <img src={logo} alt="MetroMap Logo" className="landing-logo" />
+                </div>
 
-                            {/* Logout Button */}
-                            <button
-                                className="logout-button"
-                                onClick={window.disconnectGhub}
-                                title="Disconnect"
-                                aria-label="Disconnect"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24" // Adjust size as needed
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="black"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
+                {/* Logout Button */}
+                <button
+                  className="logout-button"
+                  onClick={window.disconnectGhub}
+                  title="Disconnect"
+                  aria-label="Disconnect"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24" // Adjust size as needed
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="black"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
 
-                            <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
-                                <GraphComponent
-                                    nodes={nodes}
-                                    setNodes={setNodes}
-                                    selectedNode={selectedNode}
-                                    setSelectedNode={setSelectedNode}
-                                    editorContent={editorContent}
-                                    setEditorContent={setEditorContent}
-                                    isEditorVisible={isEditorVisible}
-                                    setIsEditorVisible={setIsEditorVisible}
-                                    stations={stations}
-                                    setStations={setStations}
-                                    usedColors={usedColors}
-                                    setUsedColors={setUsedColors}
-                                    updateGraph={updateGraph}
-                                    undoStack={undoStack}
-                                    undoAction={undoAction}
-                                />
-                            </div>
-                            <EditorComponent
-                                selectedNode={selectedNode}
-                                handleDetachNode={handleDetachNode}
-                                updateNodeProperty={updateNodeProperty}
-                                saveStatus={saveStatus}
-                                setNodes={setNodes}
-                                setSaveStatus={setSaveStatus}
-                                isOpen={isEditorVisible}
-                                setIsOpen={setIsEditorVisible}
-                            />
-                            <Menu
-                                isMenuOpen={isMenuOpen}
-                                toggleMenu={toggleMenu}
-                                setNodes={setNodes}
-                                nodes={nodes}
-                                menuRef={menuRef}
-                                setSelectedNode={setSelectedNode}
-                                setIsEditorVisible={setIsEditorVisible}
-                            />
-                            <div
-                                className="accent-bar"
-                                onClick={toggleMenu} // Toggle the menu when clicking on the accent bar
-                            ></div>
-                        </>
-                    ) : (
-                        <LoadingScreen /> // Show a loading message until the graph is loaded
-                    )
-                } />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            </Routes>
-            {isOffline && <NoConnectionScreen />}
-        </div>
+                <div className={`graph-container ${isEditorVisible ? '' : 'full-width'}`}>
+                  <GraphComponent
+                    nodes={nodes}
+                    setNodes={setNodes}
+                    selectedNode={selectedNode}
+                    setSelectedNode={setSelectedNode}
+                    editorContent={editorContent}
+                    setEditorContent={setEditorContent}
+                    isEditorVisible={isEditorVisible}
+                    setIsEditorVisible={setIsEditorVisible}
+                    stations={stations}
+                    setStations={setStations}
+                    usedColors={usedColors}
+                    setUsedColors={setUsedColors}
+                    updateGraph={updateGraph}
+                    undoStack={undoStack}
+                    undoAction={undoAction}
+                  />
+                </div>
+                <EditorComponent
+                  selectedNode={selectedNode}
+                  handleDetachNode={handleDetachNode}
+                  updateNodeProperty={updateNodeProperty}
+                  saveStatus={saveStatus}
+                  setNodes={setNodes}
+                  setSaveStatus={setSaveStatus}
+                  isOpen={isEditorVisible}
+                  setIsOpen={setIsEditorVisible}
+                />
+                <Menu
+                  isMenuOpen={isMenuOpen}
+                  toggleMenu={toggleMenu}
+                  setNodes={setNodes}
+                  nodes={nodes}
+                  menuRef={menuRef}
+                  setSelectedNode={setSelectedNode}
+                  setIsEditorVisible={setIsEditorVisible}
+                />
+                <div
+                  className="accent-bar"
+                  onClick={toggleMenu}
+                  onMouseEnter={() => { if (!isMenuOpen) setIsMenuOpen(true); }}
+                ></div>
+
+              </>
+            ) : (
+              <LoadingScreen /> // Show a loading message until the graph is loaded
+            )
+          } />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        </Routes>
+        {isOffline && <NoConnectionScreen />}
+      </div>
     </Router>
-);
+  );
 };
 
 export default App;
