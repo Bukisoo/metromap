@@ -87,10 +87,12 @@
 
 /* Remove white border on focus */
 .search-bar:focus {
-    outline: none;
-    border-color: var(--retro-orange-hover); /* Optional: Change border color on focus */
-    box-shadow: 0 0 5px var(--retro-orange-hover); /* Optional: Add a subtle glow */
-}
+    outline: none !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-shadow: none !important;
+  }
+  
 
 /* Search Results Container */
 .search-results {

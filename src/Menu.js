@@ -154,6 +154,15 @@ const Menu = ({
     const [searchResults, setSearchResults] = useState([]);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+    const searchInputRef = useRef(null);
+
+    // Focus the search input when menu opens
+    useEffect(() => {
+        if (isMenuOpen && searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    }, [isMenuOpen]);
+
     const flatNodes = flattenNodes(nodes);
 
     const fuse = new Fuse(flatNodes, {
@@ -262,6 +271,7 @@ const Menu = ({
                     placeholder="Search your notes..."
                     className="search-bar"
                     aria-label="Search your notes"
+                    ref={searchInputRef}
                 />
                 {/* Optional: Add a search icon if desired */}
             </div>
