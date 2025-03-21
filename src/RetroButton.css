@@ -8,17 +8,21 @@
 
 /* Scale on hover */
 .retro-button:hover {
-  transform: scale(1.2);
+  transform: scale(1.05);
 }
 
-/* White glow effect on hover for all buttons */
-.retro-button:hover {
-  filter: drop-shadow(0 0 10px var(--white-glow));
+.retro-button.inactive:hover {
+  transform: none;
+  filter: none;
 }
 
+/* Optional: cursor style */
+.retro-button.inactive {
+  cursor: default;
+}
 /* Plain button with no border and accent color fill */
 .retro-button rect {
-  fill: var(--accent-color);
+
   stroke: none;
 }
 
@@ -28,12 +32,18 @@
   stroke-width: 3px;
 }
 
-/* Ensure hover effects apply correctly */
-.retro-button:hover rect {
-  fill: var(--accent-color); /* Keeps the background the same on hover */
-}
-
 .retro-button:hover path {
   fill: black; /* Keeps icon color black on hover */
   stroke: black; /* Keeps stroke color black on hover */
+}
+
+/* Add to your CSS */
+.retro-button-container {
+  position: fixed;
+  bottom: 28px;
+  left: 33px;
+  display: flex;
+  gap: 5px;
+  z-index: 1000;
+  pointer-events: auto;
 }

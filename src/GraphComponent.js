@@ -53,48 +53,14 @@ const GraphComponent = ({
   const buttonSpacing = parseFloat(rootStyle.getPropertyValue('--button-spacing').trim());
   const buttonPadding = parseFloat(rootStyle.getPropertyValue('--button-padding').trim());
   const nodePositionsRef = useRef({});
+  const binButtonRef = useRef(null);
+
 
   useEffect(() => {
     if (svgRef.current) {
       createForceDirectedGraph();
     }
   }, [nodes]);
-
-  useEffect(() => {
-    const binButton = d3.select('.bin-button');
-    const binButtonRoot = createRoot(binButton.node());
-    binButtonRoot.render(
-      <RetroButton
-        iconPath={binIconPath}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (selectedNode) {
-            confirmAndRemoveNode(selectedNode);
-          }
-        }}
-      />
-    );
-  }, [selectedNode]);
-  
-
-  useEffect(() => {
-    const binButtonElement = d3.select('.bin-button');
-
-    if (isDragging) {
-      // Flash strong red first, then apply the normal red glow
-      binButtonElement.classed('flash-strong-red', true);
-
-      // Remove the flash-strong-red class after the animation completes and add the bin-glow class
-      setTimeout(() => {
-        binButtonElement.classed('flash-strong-red', false);
-        binButtonElement.classed('bin-glow', true);
-      }, 200); // Matches the animation duration (0.2s)
-    } else {
-      // Remove all glow effects when dragging stops
-      binButtonElement.classed('bin-glow', false);
-      binButtonElement.classed('flash-strong-red', false);
-    }
-  }, [isDragging]);
 
   useEffect(() => {
     if (selectedNode) {
@@ -195,7 +161,7 @@ const GraphComponent = ({
         setSelectedNode(null);
         d3.selectAll('.glow').classed('glow', false);
       });
-      
+
 
     svg.selectAll('*').remove();
     svg.append('defs').html(`
@@ -522,49 +488,6 @@ const GraphComponent = ({
     const firstButtonX = buttonPadding;
     const firstButtonY = window.innerHeight - buttonSize - buttonPadding;
 
-    const addButton = svg.append('g')
-      .attr('class', 'icon-circle add-button')
-      .attr('transform', `translate(${firstButtonX}, ${firstButtonY})`)
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
-
-    const addButtonRoot = createRoot(addButton.node());
-    addButtonRoot.render(<RetroButton iconPath={addIconPath} onClick={addNode} />);
-
-    const binButton = svg.append('g')
-      .attr('class', 'icon-circle bin-button no-hover-glow')
-      .attr('transform', `translate(${firstButtonX + buttonSize + buttonSpacing}, ${firstButtonY})`)
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
-
-    const binButtonRoot = createRoot(binButton.node());
-    binButtonRoot.render(
-      <RetroButton
-        iconPath={binIconPath}
-        onClick={() => {
-          if (selectedNode) {
-            confirmAndRemoveNode(selectedNode);
-          }
-        }}
-      />
-    );
-
-
-
-    const undoButton = svg.append('g')
-      .attr('class', 'icon-circle undo-button')
-      .attr('transform', `translate(${firstButtonX + 2 * (buttonSize + buttonSpacing)}, ${firstButtonY})`)
-      .append('foreignObject')
-      .attr('width', 75)
-      .attr('height', 75);
-
-    const undoButtonRoot = createRoot(undoButton.node());
-    undoButtonRoot.render(
-      <RetroButton iconPath={undoIconPath} onClick={undoAction} />
-    );
-
     simulation.on('tick', () => {
       node.attr('transform', d => `translate(${Math.max(30, Math.min(width - 30, d.x))},${Math.max(30, Math.min(height - 30, d.y))})`);
       link.attr('d', d => calculateLinkPath(d, width, height));
@@ -683,8 +606,10 @@ const GraphComponent = ({
       event.subject.fx = null;
       event.subject.fy = null;
 
-      const binButton = svg.select('.bin-button');
-      const binBounds = binButton.node().getBoundingClientRect();
+      if (!binButtonRef.current) return; // safety check
+
+      const binBounds = binButtonRef.current.getBoundingClientRect();
+
       const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
 
       if (
@@ -1012,7 +937,35 @@ const GraphComponent = ({
     return dfs(startNode);
   };
 
-  return <svg id="graph-svg" ref={svgRef}></svg>;
+  return (
+    <>
+      <svg id="graph-svg" ref={svgRef}></svg>
+      <div className="retro-button-container">
+        <RetroButton
+          iconPath={addIconPath}
+          onClick={addNode}
+        />
+        <RetroButton
+          iconPath={binIconPath}
+          onClick={() => {
+            if (selectedNode) {
+              confirmAndRemoveNode(selectedNode);
+            }
+          }}
+          isNotActive={!(isDragging || selectedNode)}
+          ref={binButtonRef}
+          className={!(isDragging || selectedNode) ? 'inactive' : ''}
+        />
+        <RetroButton
+          iconPath={undoIconPath}
+          onClick={undoStack.current.length === 0 ? undefined : undoAction}
+          isNotActive={undoStack.current.length === 0}
+        />
+
+      </div>
+    </>
+  );
+
 };
 
 export default GraphComponent;

@@ -179,30 +179,36 @@ const Menu = ({
         const query = e.target.value;
         setSearchQuery(query);
 
-        if (query) {
-            const results = fuse.search(query);
-
-            const processedResults = results.map((result) => {
-                const strippedNotes = stripHtmlTags(result.item.notes);
-                const generatedSnippet = generateSnippets(strippedNotes, query, results.length);
-                const highlightedNotes = highlightMatch(generatedSnippet, query);
-
-                // Discard nodes without matching notes, unless the query matches the title
-                if (!generatedSnippet || generatedSnippet.trim() === '') {
-                    if (!result.item.name.toLowerCase().includes(query.toLowerCase())) {
-                        return null;
-                    }
-                }
-
-                return { ...result.item, highlightedNotes };
-            }).filter(Boolean);  // Remove null entries
-
-            setSearchResults(processedResults);
-            highlightSearchResults(processedResults);
-        } else {
+        // Only search if query length is 2 or more characters
+        if (query.trim().length < 2) {
             setSearchResults([]);
+            // Also, you might want to remove any highlighting if the query is too short:
+            highlightSearchResults([]);
+            return;
         }
+
+        const results = fuse.search(query);
+
+        const processedResults = results.map((result) => {
+            const strippedNotes = stripHtmlTags(result.item.notes);
+            const generatedSnippet = generateSnippets(strippedNotes, query, results.length);
+            const highlightedNotes = highlightMatch(generatedSnippet, query);
+
+            // Discard nodes without matching notes, unless the query matches the title
+            if (!generatedSnippet || generatedSnippet.trim() === '') {
+                if (!result.item.name.toLowerCase().includes(query.toLowerCase())) {
+                    return null;
+                }
+            }
+
+            return { ...result.item, highlightedNotes };
+        }).filter(Boolean);  // Remove null entries
+
+        setSearchResults(processedResults);
+        highlightSearchResults(processedResults);
     };
+
+
 
     const handleResultClick = (node) => {
         setSelectedNode(node);  // Select the node
@@ -297,7 +303,11 @@ const Menu = ({
                             </div>
                         </div>
                     ))
-                ) : searchQuery ? (
+                ) : searchQuery.length > 0 && searchQuery.length < 2 ? (
+                    <div className="no-results">
+                        <p>Type at least <strong>2 characters</strong> to search.</p>
+                    </div>
+                ) : searchQuery.length >= 2 ? (
                     <div className="no-results">
                         <p>No results found for "<strong>{searchQuery}</strong>".</p>
                     </div>
@@ -306,6 +316,7 @@ const Menu = ({
                         <p>Start typing to search your notes.</p>
                     </div>
                 )}
+
             </div>
 
             {/* Menu Footer */}
