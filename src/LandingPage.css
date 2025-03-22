@@ -1,138 +1,141 @@
 /* Reset */
 body, html, #root {
-    height: 100%;
-    margin: 0;
-  }
+  height: 100%;
+  margin: 0;
+}
+
+/* Landing Page Container */
+.landing-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--graph-background);
+  color: black;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.landing-page, .landing-page * {
+  font-family: 'EB Garamond', Garamond, serif !important;
+  font-weight: 800;
+}
+
+
+/* Logo Section */
+.landing-logo-section {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  user-select: none;
+  pointer-events: none;
+}
+
+.landing-logo {
+  width: 100px;
+  height: auto;
+}
+
+/* Main Visual Image */
+.landing-main-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  user-select: none;
   
-  /* Landing Page Container */
-  .landing-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100vh;
-    width: 100vw;
-    background-color: var(--graph-background);
-    font-family: 'EB Garamond', serif;
-    color: black;
-    padding: 20px;
-    box-sizing: border-box;
-  }
-  
-  /* Logo Section */
-  .landing-logo-section {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    user-select: none;
-    pointer-events: none;
-  }
-  
-  .landing-logo {
-    width: 100px;
-    height: auto;
-  }
-  
-  /* Main Visual Image */
-  .landing-main-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex: 1;
-    width: 100%;
-    user-select: none;
-  }
-  
-  .main-visual-image {
-    max-width: 80%;
-    max-height: 45vh;
-    object-fit: contain;
-    user-select: none;
-    pointer-events: none;
-  }
-  
-  /* Text Section */
-  .landing-text-section {
-    text-align: center;
-    margin-top: 20px;
-  }
-  
+}
+
+.main-visual-image {
+  max-width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Text Section */
+.landing-text-section {
+  text-align: center;
+  margin-top: 0px;
+}
+
+.landing-title {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0px auto -10px;
+  letter-spacing: -0.7px;
+  user-select: none;
+}
+
+.landing-description {
+  max-width: 800px;
+  margin: 20px auto;
+  font-size: 16px;
+  line-height: 1.6;
+  column-count: 2; /* Dynamically split into 2 columns */
+  column-gap: 40px; /* Add spacing between columns */
+  text-align: justify;
+  user-select: none;
+}
+
+.landing-description p {
+  margin: 0;
+  text-indent: 2em; /* Alinea for the first line */
+}
+
+/* Sign-In Button */
+.signin-button {
+  background-color: var(--retro-orange);
+  color: rgba(255, 255, 255, 0.918);
+  padding: 15px 30px;
+  border: 2px solid black;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  transition: transform 0.2s ease; /* Smooth growing effect */
+  user-select: none;
+}
+
+.signin-button:hover {
+  transform: scale(1.1); /* Grow slightly on hover */
+}
+
+.signin-button:active {
+  transform: scale(1); /* Return to original size when clicked */
+}
+
+/* Footer Section */
+.landing-footer {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 20px;
+  color: var(--footer-textcolor);
+}
+
+.landing-footer p {
+  margin: 0;
+  user-select: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
   .landing-title {
-    font-size: 35px;
-    margin-bottom: 20px;
-    margin-top: -10px;
-    font-weight: 800; /* Make the text heavier */
-    letter-spacing: -0.7px; /* Adjust letter spacing for a denser look */
-    user-select: none;
+    font-size: 24px;
   }
-  
+
   .landing-description {
-    max-width: 800px;
-    margin: 20px auto;
-    font-size: 16px;
-    line-height: 1.6;
-    column-count: 2; /* Dynamically split into 2 columns */
-    column-gap: 40px; /* Add spacing between columns */
-    text-align: justify;
-    user-select: none;
+    column-count: 1; /* Switch to a single column for smaller screens */
   }
-  
-  .landing-description p {
-    margin: 0;
-    text-indent: 2em; /* Alinea for the first line */
-  }
-  
-  /* Sign-In Button */
+
   .signin-button {
-    background-color: var(--retro-orange);
-    color: rgba(255, 255, 255, 0.918);
-    padding: 15px 30px;
-    border: 2px solid black;
-    font-size: 1.5rem;
-    letter-spacing: 1px;
-    font-weight: bold;
-    font-family: 'EB Garamond', serif;
-    cursor: pointer;
-    border: none;
-    border-radius: 0;
-    outline: none;
-    transition: transform 0.2s ease; /* Smooth growing effect */
-    user-select: none;
+    padding: 10px 20px;
+    font-size: 1.2rem;
   }
-  
-  .signin-button:hover {
-    transform: scale(1.1); /* Grow slightly on hover */
-  }
-  
-  .signin-button:active {
-    transform: scale(1); /* Return to original size when clicked */
-  }
-  
-  /* Footer Section */
-  .landing-footer {
-    text-align: center;
-    font-size: 14px;
-    margin-top: 20px;
-    color: var(--footer-textcolor);
-  }
-  
-  .landing-footer p {
-    margin: 0;
-    user-select: none;
-  }
-  
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .landing-title {
-      font-size: 24px;
-    }
-  
-    .landing-description {
-      column-count: 1; /* Switch to a single column for smaller screens */
-    }
-  
-    .signin-button {
-      padding: 10px 20px;
-      font-size: 1.2rem;
-    }
-  }
-  
+}

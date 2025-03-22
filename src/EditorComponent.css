@@ -411,6 +411,77 @@
   color: var(--graph-background) !important; /* Use variable */
 }
 
+.ql-size {
+  width:50px!important; /* or try 50px, 40px – whatever fits nicely */
+  font-size: 14px; /* Optional: adjust to match UI */
+}
+
+.ql-font {
+  width:140px!important; /* or try 50px, 40px – whatever fits nicely */
+  font-size: 14px; /* Optional: adjust to match UI */
+}
+
+.ql-font-garamond {
+  font-family: 'EB Garamond', Garamond, serif;
+}
+
+.ql-font-arial {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.ql-font-georgia {
+  font-family: Georgia, serif;
+}
+
+.ql-font-times-new-roman {
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.ql-font-roboto {
+  font-family: 'Roboto', sans-serif;
+}
+
+.ql-font-monospace {
+  font-family: monospace;
+}
+
+/* Quill font dropdown styles */
+.ql-font span[data-value="garamond"]::before,
+.ql-font option[value="garamond"] {
+  font-family: 'EB Garamond', Garamond, serif;
+}
+
+.ql-font span[data-value="arial"]::before,
+.ql-font option[value="arial"] {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.ql-font span[data-value="georgia"]::before,
+.ql-font option[value="georgia"] {
+  font-family: Georgia, serif;
+}
+
+.ql-font span[data-value="times-new-roman"]::before,
+.ql-font option[value="times-new-roman"] {
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.ql-font span[data-value="roboto"]::before,
+.ql-font option[value="roboto"] {
+  font-family: 'Roboto', sans-serif;
+}
+
+.ql-font span[data-value="monospace"]::before,
+.ql-font option[value="monospace"] {
+  font-family: monospace;
+}
+
+
+.ql-editor {
+  font-family: serif;
+  font-size: 18px;
+}
+
 .ql-editor table {
   border-collapse: collapse;
   width: 100%;

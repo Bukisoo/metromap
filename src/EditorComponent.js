@@ -47,6 +47,14 @@ const EditorComponent = ({
   const lastLoadedNodeIdRef = useRef(null);
   const titleRef = useRef(null);
   const Delta = Quill.import('delta');
+  const Size = Quill.import('attributors/style/size');
+  Size.whitelist = ['12px', '14px', '16px', '18px', '24px', '32px'];
+  Quill.register(Size, true);
+  const Font = Quill.import('formats/font');
+  Font.whitelist = [
+    'garamond', 'serif', 'sans-serif', 'arial', 'georgia', 'times-new-roman', 'roboto', 'monospace'
+  ];
+  Quill.register(Font, true);
 
 
   // Resizing state and refs
@@ -79,18 +87,18 @@ const EditorComponent = ({
     [saveContent]
   );
 
-const debouncedTitleChange = useCallback(
-  debounce((newTitle, nodeId) => {
-    updateNodeProperty(
-      nodeId,
-      'name',
-      newTitle,
-      () => setSaveStatus('saved'),
-      () => setSaveStatus('error')
-    );
-  }, 1000),
-  [updateNodeProperty, setSaveStatus]
-);
+  const debouncedTitleChange = useCallback(
+    debounce((newTitle, nodeId) => {
+      updateNodeProperty(
+        nodeId,
+        'name',
+        newTitle,
+        () => setSaveStatus('saved'),
+        () => setSaveStatus('error')
+      );
+    }, 1000),
+    [updateNodeProperty, setSaveStatus]
+  );
 
   const immediateSaveContent = useCallback(
     (content, nodeId) => {
@@ -202,7 +210,7 @@ const debouncedTitleChange = useCallback(
       }
     },
     [saveStatus]
-  );  
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -246,7 +254,7 @@ const debouncedTitleChange = useCallback(
       }
     }
   };
-  
+
 
 
   const handleTitleKeyDown = (e) => {
@@ -281,7 +289,7 @@ const debouncedTitleChange = useCallback(
       }
     }
   };
-  
+
 
   const toggleColorPicker = () => {
     setShowColorPicker(!showColorPicker);
@@ -295,34 +303,34 @@ const debouncedTitleChange = useCallback(
 
   const handleMouseMove = useCallback((e) => {
     if (!isResizing.current) return;
-  
+
     const appWidth = document.body.clientWidth;
     let newWidth = ((appWidth - e.clientX) / appWidth) * 100;
     if (newWidth < 20) newWidth = 20;
     if (newWidth > 80) newWidth = 80;
-  
+
     // Live-update DOM directly (no React state)
     const container = document.querySelector('.editor-container.visible');
     if (container) {
       container.style.width = `${newWidth}%`;
     }
-  
+
     // Save this width for committing later
     resizerRef.current.dataset.lastWidth = newWidth;
   }, []);
-  
+
   const handleMouseUp = () => {
     if (isResizing.current) {
       isResizing.current = false;
       document.body.style.cursor = 'default';
-  
+
       const finalWidth = parseFloat(resizerRef.current.dataset.lastWidth);
       if (!isNaN(finalWidth)) {
         setEditorWidth(finalWidth); // Now commit to state
       }
     }
   };
-  
+
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -401,11 +409,23 @@ const debouncedTitleChange = useCallback(
             <div className="quill-toolbar" ref={toolbarRef}>
               {/* Define toolbar buttons here */}
               <span className="ql-formats">
-                <select className="ql-header" defaultValue="">
-                  <option value="1">Heading</option>
-                  <option value="2">Subheading</option>
-                  <option value="">Normal</option>
+                <select className="ql-font" defaultValue="garamond">
+                  <option value="garamond">Garamond</option>
+                  <option value="arial">Arial</option>
+                  <option value="georgia">Georgia</option>
+                  <option value="times-new-roman">Times New Roman</option>
+                  <option value="roboto">Roboto</option>
+                  <option value="monospace">Monospace</option>
                 </select>
+                <select className="ql-size">
+                  <option value="12px">12</option>
+                  <option value="14px" selected>14</option>
+                  <option value="16px">16</option>
+                  <option value="18px">18</option>
+                  <option value="24px">24</option>
+                  <option value="32px">32</option>
+                </select>
+
               </span>
               <span className="ql-formats">
                 <button className="ql-bold"></button>
@@ -458,7 +478,7 @@ const debouncedTitleChange = useCallback(
           style={{ width: `${loadingProgress}%` }}
         ></div>
       </div>
-    </div>
+    </div >
   );
 };
 

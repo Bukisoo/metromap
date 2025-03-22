@@ -14,6 +14,11 @@
     font-size: 24px;
 }
 
+.loading-screen * {
+    font-family: 'EB Garamond', Garamond, serif !important;
+    font-weight: 800;
+  }
+
 .landing-logo-section {
     margin-bottom: 40px; /* Space between logo and loading text */
 }
