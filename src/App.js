@@ -12,11 +12,14 @@ import NoConnectionScreen from './NoConnectionScreen';
 import Menu from './Menu';
 import logo from './logo.svg'; // Replace with your actual logo path
 import PrivacyPolicy from './PrivacyPolicy'; // New component
+import CornerSpinner from './CornerSpinner';
+
 
 const FILE_NAME = 'MetroMapData.json';
 const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
 const API_KEY = process.env.REACT_APP_API_KEY;
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
 
 const initialGraph = (stations) => {
   const rootStyle = getComputedStyle(document.documentElement);
@@ -154,89 +157,51 @@ const sanitizeGraph = (nodes) => {
   });
 };
 
-let saveQueue = [];
-let isSaving = false;
+const saveGraph = async (graph, setSaveStatus) => {
+  const sanitizedGraph = sanitizeGraph(graph);
 
+  if (!gapi.client.drive) {
+    console.error("Google Drive API client not initialized.");
+    throw new Error("Drive client not initialized");
+  }
 
-const saveGraph = (graph, setSaveStatus, fileId = null, onSuccess = null) => {
-  saveQueue.push({ graph, fileId, onSuccess });
+  const response = await gapi.client.drive.files.list({
+    q: `name='${FILE_NAME}' and trashed=false`,
+    fields: 'files(id)',
+  });
 
-  const processQueue = async () => {
-    if (isSaving || saveQueue.length === 0) return;
+  const fileId = response.result.files?.[0]?.id;
 
-    isSaving = true;
-    const { graph: queuedGraph, fileId, onSuccess } = saveQueue.shift();
-    const sanitizedGraph = sanitizeGraph(queuedGraph);
-
-    setSaveStatus('saving');
-
-    try {
-      if (!gapi.client.drive) {
-        console.error("Google Drive API client not initialized.");
-        setSaveStatus('error');
-        isSaving = false;
-        processQueue(); // Process next item
-        return;
-      }
-
-      let resolvedFileId = fileId;
-      if (!resolvedFileId) {
-        const response = await gapi.client.drive.files.list({
-          q: `name='${FILE_NAME}' and trashed=false`,
-          fields: 'files(id, name)',
-        });
-
-        const files = response.result.files;
-        if (files.length > 0) {
-          resolvedFileId = files[0].id;
-        }
-      }
-
-      const metadata = {
-        name: FILE_NAME,
-        mimeType: 'application/json',
-      };
-
-      const multipartRequestBody =
-        "\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" +
-        JSON.stringify(metadata) +
-        "\r\n--boundary\r\nContent-Type: application/json\r\n\r\n" +
-        JSON.stringify(sanitizedGraph) +
-        "\r\n--boundary--";
-
-      const requestPath = resolvedFileId
-        ? `/upload/drive/v3/files/${resolvedFileId}`
-        : '/upload/drive/v3/files';
-
-      const startTime = Date.now();
-
-      await gapi.client.request({
-        path: requestPath,
-        method: resolvedFileId ? 'PATCH' : 'POST',
-        params: { uploadType: 'multipart' },
-        headers: {
-          'Content-Type': 'multipart/related; boundary=boundary',
-        },
-        body: multipartRequestBody,
-      });
-
-      const endTime = Date.now();
-      console.log(`Graph saved to Google Drive in ${endTime - startTime}ms`);
-      setSaveStatus('saved');
-
-      if (onSuccess) onSuccess();
-      setTimeout(() => setSaveStatus(''), 2000);
-    } catch (err) {
-      console.error('Error saving to Drive:', err);
-      setSaveStatus('error');
-    }
-
-    isSaving = false;
-    processQueue(); // Trigger next in queue
+  const metadata = {
+    name: FILE_NAME,
+    mimeType: 'application/json',
   };
 
-  processQueue(); // Start processing if not already doing so
+  const multipartRequestBody =
+    "\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" +
+    JSON.stringify(metadata) +
+    "\r\n--boundary\r\nContent-Type: application/json\r\n\r\n" +
+    JSON.stringify(sanitizedGraph) +
+    "\r\n--boundary--";
+
+  const requestPath = fileId
+    ? `/upload/drive/v3/files/${fileId}`
+    : '/upload/drive/v3/files';
+
+  const startTime = Date.now();
+
+  await gapi.client.request({
+    path: requestPath,
+    method: fileId ? 'PATCH' : 'POST',
+    params: { uploadType: 'multipart' },
+    headers: { 'Content-Type': 'multipart/related; boundary=boundary' },
+    body: multipartRequestBody,
+  });
+
+  const endTime = Date.now();
+  console.log(`Graph saved to Google Drive in ${endTime - startTime}ms`);
 };
+
 
 
 
@@ -296,8 +261,58 @@ const App = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [nodeProperties, setNodeProperties] = useState({});
+  const saveQueueRef = useRef([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
 
 
+  const enqueueGraphSave = (updatedNodes, onSuccess = null) => {
+    saveQueueRef.current.push({ graph: updatedNodes, onSuccess });
+    setSaveStatus('saving');
+    processSaveQueue();
+  };
+
+  const processSaveQueue = async () => {
+    if (isSavingRef.current || saveQueueRef.current.length === 0) return;
+  
+    isSavingRef.current = true;
+    setIsSaving(true);
+    setSaveStatus('saving');
+  
+    const nextItem = saveQueueRef.current.shift();
+    if (!nextItem) return;
+  
+    const { graph: nextGraph, onSuccess } = nextItem;
+  
+    try {
+      await saveGraph(nextGraph, setSaveStatus);
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Error processing save queue:", error);
+      setSaveStatus('error');
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
+      setSaveStatus('saved');
+      if (saveQueueRef.current.length > 0) processSaveQueue();
+    }
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isSaving || saveQueueRef.current.length > 0) {
+        const message = "Changes are still being saved. Are you sure you want to leave?";
+        e.preventDefault();
+        e.returnValue = message;
+        return message;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isSaving]);
 
   useEffect(() => {
     // Handle online/offline events
@@ -390,136 +405,79 @@ const App = () => {
   const undoAction = () => {
     if (undoStack.current.length > 0) {
       const lastAction = undoStack.current.pop();
-      console.log("Last action:", lastAction);
-
       if (lastAction.previousState) {
-        // Revert to the previous state
         setNodes(lastAction.previousState);
-
-        // Save the reverted state to Google Drive
-        saveGraph(lastAction.previousState, setSaveStatus);
-      } else {
-        console.warn("No previous state found for this action.");
+        enqueueGraphSave(lastAction.previousState);
       }
-    } else {
-      console.log("Undo stack is empty.");
     }
   };
-
 
   const updateGraph = (newNodes) => {
     setNodes(newNodes);
-    saveGraph(newNodes, setSaveStatus); // Ensure setSaveStatus is passed here
+    enqueueGraphSave(newNodes);
   };
 
   const handleDetachNode = (nodeId) => {
-    console.log(`Starting to detach node: ${nodeId}`);
-
-    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Clone the current state of nodes
+    const oldNodes = JSON.parse(JSON.stringify(nodes));
     let nodeToDetach = null;
 
-    // Step 1: Find the node and remove it from its parent
-    const detachNode = (nodes) => {
-      console.log('Traversing nodes:', nodes);
-      return nodes.map(node => {
-        console.log(`Inspecting node: ${node.id}`);
-        if (node.children) {
-          const filteredChildren = node.children.filter(child => {
-            console.log(`Checking child node: ${child.id}`);
-            if (child.id === nodeId) {
-              nodeToDetach = child; // Store the node to detach
-              console.log(`Node to detach found: ${child.id}`);
-              return false; // Remove the child from its parent
-            }
-            return true;
-          });
+    const detachNode = (nodes) =>
+      nodes.map(node => ({
+        ...node,
+        children: node.children?.filter(child => {
+          if (child.id === nodeId) {
+            nodeToDetach = child;
+            return false;
+          }
+          return true;
+        }).map(detachNode),
+      }));
 
-          // Recursively continue to search in the child nodes
-          const updatedChildren = filteredChildren.map(child => {
-            if (child.children) {
-              return detachNode([child])[0];
-            }
-            return child;
-          });
+    const updatedNodes = detachNode(nodes);
+    if (nodeToDetach) updatedNodes.push(nodeToDetach);
 
-          return { ...node, children: updatedChildren };
-        }
-        return node;
-      });
-    };
-
-    let updatedNodes = detachNode(nodes);
-
-    // Step 2: If the node was found and detached, add it as a top-level node
-    if (nodeToDetach) {
-      console.log(`Adding node as top-level: ${nodeToDetach.id}`);
-      updatedNodes.push(nodeToDetach);
-    } else {
-      console.log('Node to detach not found or already top-level');
-    }
-
-    // Step 3: Push to undo stack and update state
-    undoStack.current.push({
-      type: 'detach_node',
-      previousState: oldNodes, // Save the old state
-      newState: updatedNodes,  // Save the new state
-    });
-
-    console.log('Updated nodes after detaching:', updatedNodes);
-
-    // Update nodes state
+    undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
     setNodes(updatedNodes);
-
-    // Save the updated graph
-    saveGraph(updatedNodes, setSaveStatus);
-
-    console.log('Detachment process complete.');
+    enqueueGraphSave(updatedNodes);
   };
+
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
 
-    const updateNodes = (nodes) => {
-      return nodes.map(node => {
+    const updateNodes = (nodes) =>
+      nodes.map(node => {
         if (node.id === id) {
           if (property === 'color') {
-            const originalColor = node.color;
-            node = updateNodeAndChildrenColors(node, value, originalColor);
+            node = updateNodeAndChildrenColors(node, value, node.color);
           }
           return { ...node, [property]: value };
-        } else if (node.children) {
-          return { ...node, children: updateNodes(node.children) };
         }
+        if (node.children) node.children = updateNodes(node.children);
         return node;
       });
-    };
 
     const updatedNodes = updateNodes(nodes);
 
-    undoStack.current.push({
-      type: 'update_node',
-      previousState: oldNodes,
-      newState: updatedNodes,
-    });
-
-    setNodes(updatedNodes); // Ensure this function is correctly passed
+    undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
+    setNodes(updatedNodes);
 
     if (property === 'notes') {
       saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
     } else {
-      saveGraph(updatedNodes, setSaveStatus, null, onSuccess);
+      enqueueGraphSave(updatedNodes, onSuccess);
     }
-    
 
-    if (selectedNode && selectedNode.id === id) {
+    if (selectedNode?.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
     }
 
     setEditorContent(prev => ({
       ...prev,
-      [id]: { ...prev[id], [property]: value }
+      [id]: { ...prev[id], [property]: value },
     }));
   };
+
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
@@ -645,7 +603,6 @@ const App = () => {
                   onClick={toggleMenu}
                   onMouseEnter={() => { if (!isMenuOpen) setIsMenuOpen(true); }}
                 ></div>
-
               </>
             ) : (
               <LoadingScreen /> // Show a loading message until the graph is loaded
@@ -655,7 +612,9 @@ const App = () => {
         </Routes>
         {isOffline && <NoConnectionScreen />}
       </div>
+      {(isSaving || saveQueueRef.current.length > 0) && !isEditorVisible && <CornerSpinner />}
     </Router>
+
   );
 };
 

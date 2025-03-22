@@ -583,8 +583,8 @@ const GraphComponent = ({
       }, 100);
 
       if (!event.active) simulationRef.current.alphaTarget(0.3).restart();
-      event.subject.fx = event.subject.x;
-      event.subject.fy = event.subject.y;
+      event.subject._startX = event.subject.x;
+      event.subject._startY = event.subject.y;
     }
 
     function dragged(event) {
@@ -598,42 +598,50 @@ const GraphComponent = ({
         clearTimeout(dragTimeoutRef.current);
         dragTimeoutRef.current = null;
       } else {
-        // If timeout has already triggered, reset dragging state
-        setIsDragging(false);
+        setIsDragging(false); // Only set to false if timeout was triggered
       }
-
+    
       if (!event.active) simulationRef.current.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-
-      if (!binButtonRef.current) return; // safety check
-
+    
+      // Exit early if bin or node element can't be resolved properly
+      if (!binButtonRef.current || typeof d.x !== 'number' || typeof d.y !== 'number') return;
+    
       const binBounds = binButtonRef.current.getBoundingClientRect();
-
-      const nodeBounds = event.sourceEvent.target.getBoundingClientRect();
-
-      if (
-        nodeBounds.left < binBounds.right &&
-        nodeBounds.right > binBounds.left &&
-        nodeBounds.top < binBounds.bottom &&
-        nodeBounds.bottom > binBounds.top
-      ) {
+    
+      // Convert graph coordinates to screen coordinates
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const zoomTransform = zoomRef.current;
+      const screenX = svgRect.left + (zoomTransform.x + d.x * zoomTransform.k);
+      const screenY = svgRect.top + (zoomTransform.y + d.y * zoomTransform.k);
+    
+      const margin = 8; // Add a small margin of forgiveness
+      const isOverBin =
+        screenX + margin > binBounds.left &&
+        screenX - margin < binBounds.right &&
+        screenY + margin > binBounds.top &&
+        screenY - margin < binBounds.bottom;
+    
+      if (isOverBin) {
         confirmAndRemoveNode(d);
-      } else {
-        const targetNode = flatNodes.find(node => {
-          if (node.id !== d.id) {
-            const dx = node.x - d.x;
-            const dy = node.y - d.y;
-            return Math.sqrt(dx * dx + dy * dy) < 80;
-          }
-          return false;
-        });
-
-        if (targetNode) {
-          connectNodes(d, targetNode);
-        }
+        return;
       }
-    }
+    
+      // Attempt to connect to nearby nodes
+      const targetNode = flatNodes.find(node => {
+        if (node.id !== d.id) {
+          const dx = node.x - d.x;
+          const dy = node.y - d.y;
+          return Math.sqrt(dx * dx + dy * dy) < 80;
+        }
+        return false;
+      });
+    
+      if (targetNode) {
+        connectNodes(d, targetNode);
+      }
+    }      
   };
 
   const applyGlowEffect = () => {
