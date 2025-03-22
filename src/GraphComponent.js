@@ -948,6 +948,7 @@ const GraphComponent = ({
   return (
     <>
       <svg id="graph-svg" ref={svgRef}></svg>
+      
       <div className="retro-button-container">
         <RetroButton
           iconPath={addIconPath}

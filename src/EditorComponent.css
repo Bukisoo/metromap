@@ -7,9 +7,9 @@
   right: 0;
   top: 0;
   height: 100%;
+  border-left: 4px solid var(--accent-color);
   background: var(--graph-background); /* Use variable */
   color: var(--editor-background); /* Use variable */
-  border-left: 4px solid var(--accent-color); /* Use variable */
   display: flex;
   flex-direction: column;
   transform: translateX(100%); /* Start off-screen */
@@ -17,6 +17,44 @@
   z-index: 1000;
   overflow: hidden; /* Prevent content overflow */
 }
+
+.resizer {
+  position: absolute;
+  left: -4px; /* move inside, right after the border */
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 1001;
+
+  background: rgba(0, 0, 0, 0.05); /* subtle default fill */
+  transition: background 0.2s ease;
+}
+
+.resizer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 40px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.2),
+    rgba(0, 0, 0, 0.2) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  border-radius: 2px;
+}
+
+
+.resizer:hover {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1));
+}
+
+
 
 .editor-container.visible {
   transform: translateX(0); /* Slide in */
@@ -93,47 +131,53 @@
 .editor-top-row {
   display: flex;
   align-items: center;
-  padding: 5px 15px; /* Added padding */
+  padding: 5px 1px; /* Added padding */
 }
 
 /* Editor Title */
 .editor-title {
   flex: 1;
   margin-right: 10px;
-  color: var(--graph-background); /* Use variable */
-  font-size: 30px; /* Adjust as needed */
+  color: var(--graph-background);
+  font-size: 30px;
   font-weight: 800;
-  font-family: 'EB Garamond', Garamond, serif; /* Apply Garamond font */
+  font-family: 'EB Garamond', Garamond, serif;
   display: flex;
   align-items: center;
-  padding: 0;
-  background: transparent; /* Make it look like plain text */
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.1); /* subtle dark hint */
+  border-radius: 6px;
+  transition: background 0.2s ease;
   border: none;
-  outline: none; /* Remove focus outline */
+  outline: none;
   cursor: text;
 
-  /* Handle overflow */
   white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
   text-overflow: ellipsis;
 
-  /* Hide scrollbar */
-  scrollbar-width: none; /* For Firefox */
-  -ms-overflow-style: none; /* For Internet Explorer and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.editor-title:hover {
+  background: rgba(0, 0, 0, 0.12); /* slightly darker on hover */
+}
+
+.editor-title:focus {
+  background: rgba(0, 0, 0, 0.15); /* stronger highlight on edit */
+  outline: none;
 }
 
 .editor-title::-webkit-scrollbar {
-  display: none; /* For Chrome, Safari, and Opera */
+  display: none;
 }
 
 .editor-title:empty:before {
   content: attr(data-placeholder);
-  color: var(--graph-background);
-}
-
-.editor-title:focus {
-  outline: none; /* Remove outline on focus */
+  color: rgba(0, 0, 0, 0.3);
+  font-style: italic;
 }
 
 /* Color Pastille Container */
@@ -372,6 +416,7 @@
   width: 100%;
 }
 
+
 .ql-editor th,
 .ql-editor td {
   border: 1px solid #ddd;
@@ -421,14 +466,6 @@
     padding: 0; /* Already removed */
   }
 
-  .editor-top-row {
-    padding: 10px 15px; /* Already set */
-  }
-
-  .editor-top-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 
   .editor-title {
     width: 100%;

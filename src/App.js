@@ -234,6 +234,7 @@ const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onE
 
     // Step 3: Save the updated graph back to Google Drive
     await saveGraph(updatedGraph, setSaveStatus, null, onSuccess);
+    if (onSuccess) onSuccess();
 
     console.log("Note update successfully saved to Google Drive.");
   } catch (error) {
@@ -578,6 +579,7 @@ const App = () => {
                     undoStack={undoStack}
                     undoAction={undoAction}
                   />
+                  {(isSaving || saveQueueRef.current.length > 0) && <CornerSpinner />}
                 </div>
                 <EditorComponent
                   selectedNode={selectedNode}
@@ -612,7 +614,6 @@ const App = () => {
         </Routes>
         {isOffline && <NoConnectionScreen />}
       </div>
-      {(isSaving || saveQueueRef.current.length > 0) && !isEditorVisible && <CornerSpinner />}
     </Router>
 
   );

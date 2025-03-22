@@ -293,30 +293,36 @@ const debouncedTitleChange = useCallback(
     document.body.style.cursor = 'col-resize';
   };
 
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!isResizing.current) return;
-
-      // Calculate the new width as a percentage
-      const appWidth = document.body.clientWidth;
-      let newWidth = ((appWidth - e.clientX) / appWidth) * 100;
-
-      // Set minimum and maximum widths
-      if (newWidth < 20) newWidth = 20;
-      if (newWidth > 80) newWidth = 80;
-
-      setEditorWidth(newWidth);
-    },
-    []
-  );
-
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing.current) return;
+  
+    const appWidth = document.body.clientWidth;
+    let newWidth = ((appWidth - e.clientX) / appWidth) * 100;
+    if (newWidth < 20) newWidth = 20;
+    if (newWidth > 80) newWidth = 80;
+  
+    // Live-update DOM directly (no React state)
+    const container = document.querySelector('.editor-container.visible');
+    if (container) {
+      container.style.width = `${newWidth}%`;
+    }
+  
+    // Save this width for committing later
+    resizerRef.current.dataset.lastWidth = newWidth;
+  }, []);
+  
   const handleMouseUp = () => {
     if (isResizing.current) {
       isResizing.current = false;
       document.body.style.cursor = 'default';
+  
+      const finalWidth = parseFloat(resizerRef.current.dataset.lastWidth);
+      if (!isNaN(finalWidth)) {
+        setEditorWidth(finalWidth); // Now commit to state
+      }
     }
   };
-
+  
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
