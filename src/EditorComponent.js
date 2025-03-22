@@ -79,13 +79,18 @@ const EditorComponent = ({
     [saveContent]
   );
 
-  const debouncedTitleChange = useCallback(
-    debounce((newTitle, nodeId) => {
-      updateNodeProperty(nodeId, 'name', newTitle);
-    }, 1000),
-    [updateNodeProperty]
-  );
-
+const debouncedTitleChange = useCallback(
+  debounce((newTitle, nodeId) => {
+    updateNodeProperty(
+      nodeId,
+      'name',
+      newTitle,
+      () => setSaveStatus('saved'),
+      () => setSaveStatus('error')
+    );
+  }, 1000),
+  [updateNodeProperty, setSaveStatus]
+);
 
   const immediateSaveContent = useCallback(
     (content, nodeId) => {
@@ -197,7 +202,7 @@ const EditorComponent = ({
       }
     },
     [saveStatus]
-  );
+  );  
 
   useEffect(() => {
     if (isOpen) {
@@ -236,11 +241,12 @@ const EditorComponent = ({
     if (titleRef.current && selectedNode) {
       const newTitle = titleRef.current.textContent.trim();
       if (newTitle !== selectedNode.name) {
-        // Use the debounced function instead of calling updateNodeProperty immediately
+        setSaveStatus('saving');
         debouncedTitleChange(newTitle, selectedNode.id);
       }
     }
   };
+  
 
 
   const handleTitleKeyDown = (e) => {
@@ -253,6 +259,7 @@ const EditorComponent = ({
     (color) => {
       setSelectedColor(color.hex);
       if (selectedNode) {
+        setSaveStatus('saving');
         updateNodeProperty(selectedNode.id, 'color', color.hex);
       }
     },
@@ -260,13 +267,21 @@ const EditorComponent = ({
   );
 
   const handleColorPastilleClick = (color) => {
-    if (colorOptions.includes(color)) { // Ensure only allowed colors are used
+    if (colorOptions.includes(color)) {
       setSelectedColor(color);
       if (selectedNode) {
-        updateNodeProperty(selectedNode.id, 'color', color);
+        setSaveStatus('saving');
+        updateNodeProperty(
+          selectedNode.id,
+          'color',
+          color,
+          () => setSaveStatus('saved'),
+          () => setSaveStatus('error')
+        );
       }
     }
   };
+  
 
   const toggleColorPicker = () => {
     setShowColorPicker(!showColorPicker);

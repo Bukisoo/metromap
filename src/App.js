@@ -154,27 +154,33 @@ const sanitizeGraph = (nodes) => {
   });
 };
 
-const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) => {
-  const sanitizedGraph = sanitizeGraph(graph); // Remove transient properties
+let saveQueue = [];
+let isSaving = false;
 
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-  }
 
-  setSaveStatus('saving');
+const saveGraph = (graph, setSaveStatus, fileId = null, onSuccess = null) => {
+  saveQueue.push({ graph, fileId, onSuccess });
 
-  saveTimeout = setTimeout(async () => {
-    // Start timer
-    const startTime = Date.now();
+  const processQueue = async () => {
+    if (isSaving || saveQueue.length === 0) return;
+
+    isSaving = true;
+    const { graph: queuedGraph, fileId, onSuccess } = saveQueue.shift();
+    const sanitizedGraph = sanitizeGraph(queuedGraph);
+
+    setSaveStatus('saving');
 
     try {
       if (!gapi.client.drive) {
         console.error("Google Drive API client not initialized.");
         setSaveStatus('error');
+        isSaving = false;
+        processQueue(); // Process next item
         return;
       }
 
-      if (!fileId) {
+      let resolvedFileId = fileId;
+      if (!resolvedFileId) {
         const response = await gapi.client.drive.files.list({
           q: `name='${FILE_NAME}' and trashed=false`,
           fields: 'files(id, name)',
@@ -182,7 +188,7 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
 
         const files = response.result.files;
         if (files.length > 0) {
-          fileId = files[0].id;
+          resolvedFileId = files[0].id;
         }
       }
 
@@ -195,16 +201,18 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
         "\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" +
         JSON.stringify(metadata) +
         "\r\n--boundary\r\nContent-Type: application/json\r\n\r\n" +
-        JSON.stringify(sanitizedGraph) + // Use sanitizedGraph
+        JSON.stringify(sanitizedGraph) +
         "\r\n--boundary--";
 
-      const requestPath = fileId
-        ? `/upload/drive/v3/files/${fileId}`
+      const requestPath = resolvedFileId
+        ? `/upload/drive/v3/files/${resolvedFileId}`
         : '/upload/drive/v3/files';
+
+      const startTime = Date.now();
 
       await gapi.client.request({
         path: requestPath,
-        method: fileId ? 'PATCH' : 'POST',
+        method: resolvedFileId ? 'PATCH' : 'POST',
         params: { uploadType: 'multipart' },
         headers: {
           'Content-Type': 'multipart/related; boundary=boundary',
@@ -212,22 +220,22 @@ const saveGraph = async (graph, setSaveStatus, fileId = null, onSuccess = null) 
         body: multipartRequestBody,
       });
 
-      // End timer
       const endTime = Date.now();
       console.log(`Graph saved to Google Drive in ${endTime - startTime}ms`);
-
       setSaveStatus('saved');
-      console.log("Graph saved to Google Drive.");
 
-      // Call the onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error("Error saving graph to Google Drive:", error);
+      if (onSuccess) onSuccess();
+      setTimeout(() => setSaveStatus(''), 2000);
+    } catch (err) {
+      console.error('Error saving to Drive:', err);
       setSaveStatus('error');
     }
-  }, 1000);
+
+    isSaving = false;
+    processQueue(); // Trigger next in queue
+  };
+
+  processQueue(); // Start processing if not already doing so
 };
 
 
@@ -499,8 +507,9 @@ const App = () => {
     if (property === 'notes') {
       saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
     } else {
-      saveGraph(updatedNodes, setSaveStatus);
+      saveGraph(updatedNodes, setSaveStatus, null, onSuccess);
     }
+    
 
     if (selectedNode && selectedNode.id === id) {
       setSelectedNode({ ...selectedNode, [property]: value });
@@ -511,8 +520,6 @@ const App = () => {
       [id]: { ...prev[id], [property]: value }
     }));
   };
-
-
 
   const updateNodeAndChildrenColors = (node, newColor, originalColor) => {
     const updateColor = (nodes) => {
