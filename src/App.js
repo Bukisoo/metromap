@@ -13,6 +13,7 @@ import Menu from './Menu';
 import logo from './logo.svg'; // Replace with your actual logo path
 import PrivacyPolicy from './PrivacyPolicy'; // New component
 import CornerSpinner from './CornerSpinner';
+import ConflictModal from './ConflictModal';
 
 
 const FILE_NAME = 'MetroMapData.json';
@@ -265,9 +266,113 @@ const App = () => {
   const saveQueueRef = useRef([]);
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
+  const fileVersionDateRef = useRef(null);
+  const lastUserInputRef = useRef(Date.now());
+  const lastCheckTimeRef = useRef(Date.now());
+  const [conflictDetected, setConflictDetected] = useState(false);
+  const versionCheckValidatedRef = useRef(false);
+
+
+  useEffect(() => {
+    const updateInput = () => {
+      lastUserInputRef.current = Date.now();
+    };
+
+    window.addEventListener("mousemove", updateInput);
+    window.addEventListener("keydown", updateInput);
+    window.addEventListener("click", updateInput);
+
+    return () => {
+      window.removeEventListener("mousemove", updateInput);
+      window.removeEventListener("keydown", updateInput);
+      window.removeEventListener("click", updateInput);
+    };
+    versionCheckValidatedRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const now = Date.now();
+      const timeSinceInput = now - lastUserInputRef.current;
+      const timeSinceCheck = now - lastCheckTimeRef.current;
+
+      if (timeSinceInput < 10000 && timeSinceCheck > 10000) {
+        console.log('[DEBUG] User active, checking remote version...');
+        lastCheckTimeRef.current = now;
+
+        try {
+          const meta = await gapi.client.drive.files.list({
+            q: `name='${FILE_NAME}' and trashed=false`,
+            fields: 'files(modifiedTime)',
+          });
+          const modifiedStr = meta.result.files?.[0]?.modifiedTime;
+          if (!modifiedStr) return;
+          
+          const remoteTime = new Date(modifiedStr);
+          const localTime = fileVersionDateRef.current;
+          
+          console.log('[DEBUG] Remote modified time:', remoteTime.toISOString());
+          console.log('[DEBUG] Local fileVersionDateRef:', localTime?.toISOString());
+          
+          if (localTime && remoteTime.getTime() > localTime.getTime()) {
+            console.warn('[DEBUG] Conflict detected: remote version is newer.');
+            setConflictDetected(true);
+          } else { 
+            versionCheckValidatedRef.current = true;
+          }       
+        } catch (e) {
+          console.error("[DEBUG] Version check failed", e);
+        }
+      } else {
+        console.log('[DEBUG] No interaction or not enough time passed – skipping check.');
+      }
+    }, 5000); // Still check every 5s, logic inside prevents API spam
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleConflictAction = async (choice) => {
+    setConflictDetected(false);
+
+    if (choice === 'load') {
+      const newGraph = await loadGraph();
+      setNodes(newGraph);
+      setSelectedNode(null);
+      setIsEditorVisible(false);
+    
+      // Fetch accurate modifiedTime from Drive
+      const meta = await gapi.client.drive.files.list({
+        q: `name='${FILE_NAME}' and trashed=false`,
+        fields: 'files(modifiedTime)',
+      });
+      const remoteTime = new Date(meta.result.files?.[0]?.modifiedTime);
+      fileVersionDateRef.current = remoteTime;
+      console.log('[DEBUG] fileVersionDateRef updated after loading:', remoteTime.toISOString());
+    }
+     else if (choice === 'overwrite') {
+      await saveGraph(nodes, setSaveStatus);
+      fileVersionDateRef.current = new Date();
+    }
+
+    lastUserInputRef.current = Date.now();
+    lastCheckTimeRef.current = Date.now();
+  };
+
+  const fetchFileModifiedTime = async () => {
+    const res = await gapi.client.drive.files.list({
+      q: `name='${FILE_NAME}' and trashed=false`,
+      fields: 'files(modifiedTime)',
+    });
+    const modTime = res.result.files?.[0]?.modifiedTime;
+    if (modTime) fileVersionDateRef.current = new Date(modTime);
+  };
+
 
 
   const enqueueGraphSave = (updatedNodes, onSuccess = null) => {
+    if (!versionCheckValidatedRef.current) {
+      console.warn('[BLOCKED] Save attempt before version check!');
+      return; // ⛔ Prevent save
+    }
     saveQueueRef.current.push({ graph: updatedNodes, onSuccess });
     setSaveStatus('saving');
     processSaveQueue();
@@ -275,18 +380,26 @@ const App = () => {
 
   const processSaveQueue = async () => {
     if (isSavingRef.current || saveQueueRef.current.length === 0) return;
-  
+
     isSavingRef.current = true;
     setIsSaving(true);
     setSaveStatus('saving');
-  
+
     const nextItem = saveQueueRef.current.shift();
     if (!nextItem) return;
-  
+
     const { graph: nextGraph, onSuccess } = nextItem;
-  
+
     try {
       await saveGraph(nextGraph, setSaveStatus);
+
+      const meta = await gapi.client.drive.files.list({
+        q: `name='${FILE_NAME}' and trashed=false`,
+        fields: 'files(modifiedTime)',
+      });
+      const remoteTime = new Date(meta.result.files?.[0]?.modifiedTime);
+      fileVersionDateRef.current = remoteTime;
+
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error("Error processing save queue:", error);
@@ -383,6 +496,7 @@ const App = () => {
 
         // Load the graph
         let graph = await loadGraph();
+        await fetchFileModifiedTime();
 
         // If the graph is empty, initialize it with fetched station names or fallback
         if (graph.length === 0) {
@@ -613,6 +727,12 @@ const App = () => {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Routes>
         {isOffline && <NoConnectionScreen />}
+        {conflictDetected && (
+          <ConflictModal
+            onLoadRemote={() => handleConflictAction('load')}
+            onOverwrite={() => handleConflictAction('overwrite')}
+          />
+        )}
       </div>
     </Router>
 
