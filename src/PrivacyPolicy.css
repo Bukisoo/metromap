@@ -48,3 +48,8 @@
 .privacy-content a:focus {
     text-decoration: underline;
 }
+
+.privacy-policy-container * {
+    font-family: 'EB Garamond', Garamond, serif !important;
+    font-weight: 800;
+  }

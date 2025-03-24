@@ -23,3 +23,9 @@
     pointer-events: none;
   }
   
+
+  
+.no-connection-container * {
+  font-family: 'EB Garamond', Garamond, serif !important;
+  font-weight: 800;
+}

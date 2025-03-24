@@ -38,7 +38,13 @@
     padding: 0; /* Remove padding to align with sharp theme */
     display: flex;
     flex-direction: column;
+    font-weight: 800;
 }
+
+.menu * {
+    font-family: 'EB Garamond', Garamond, serif !important;
+    font-weight: 800;
+  }
 
 /* Expand the menu */
 .menu.open {
@@ -157,7 +163,7 @@
     padding: 20px;
     text-align: center;
     color: #000000; /* Change to black */
-    font-size: 14px;
+    font-size: 16px;
     font-family: 'EB Garamond', serif; /* Garamond font */
 }
 

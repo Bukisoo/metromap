@@ -501,8 +501,18 @@ const App = () => {
         // If the graph is empty, initialize it with fetched station names or fallback
         if (graph.length === 0) {
           graph = initialGraph(fetchedStations);
-          await saveGraph(graph, setSaveStatus); // Save the newly created graph immediately
+          await saveGraph(graph, setSaveStatus);
+        
+          // ⬇️ Update the version timestamp after the first save
+          const meta = await gapi.client.drive.files.list({
+            q: `name='${FILE_NAME}' and trashed=false`,
+            fields: 'files(modifiedTime)',
+          });
+          const remoteTime = new Date(meta.result.files?.[0]?.modifiedTime);
+          fileVersionDateRef.current = remoteTime;
+          console.log('[DEBUG] fileVersionDateRef set after initial graph save:', remoteTime.toISOString());
         }
+        
 
         setNodes(graph);
         setIsGraphLoaded(true); // Mark the graph as loaded
