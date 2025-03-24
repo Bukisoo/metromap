@@ -307,19 +307,19 @@ const App = () => {
           });
           const modifiedStr = meta.result.files?.[0]?.modifiedTime;
           if (!modifiedStr) return;
-          
+
           const remoteTime = new Date(modifiedStr);
           const localTime = fileVersionDateRef.current;
-          
+
           console.log('[DEBUG] Remote modified time:', remoteTime.toISOString());
           console.log('[DEBUG] Local fileVersionDateRef:', localTime?.toISOString());
-          
+
           if (localTime && remoteTime.getTime() > localTime.getTime()) {
             console.warn('[DEBUG] Conflict detected: remote version is newer.');
             setConflictDetected(true);
-          } else { 
+          } else {
             versionCheckValidatedRef.current = true;
-          }       
+          }
         } catch (e) {
           console.error("[DEBUG] Version check failed", e);
         }
@@ -338,7 +338,7 @@ const App = () => {
       setNodes(newGraph);
       setSelectedNode(null);
       setIsEditorVisible(false);
-    
+
       // Fetch accurate modifiedTime from Drive
       const meta = await gapi.client.drive.files.list({
         q: `name='${FILE_NAME}' and trashed=false`,
@@ -348,7 +348,7 @@ const App = () => {
       fileVersionDateRef.current = remoteTime;
       console.log('[DEBUG] fileVersionDateRef updated after loading:', remoteTime.toISOString());
     }
-     else if (choice === 'overwrite') {
+    else if (choice === 'overwrite') {
       await saveGraph(nodes, setSaveStatus);
       fileVersionDateRef.current = new Date();
     }
@@ -533,27 +533,58 @@ const App = () => {
   };
 
   const handleDetachNode = (nodeId) => {
+    if (!Array.isArray(nodes)) {
+      console.error('[DetachNode] nodes is not an array:', nodes);
+      return;
+    }
+  
+    console.log('[Detach] Selected node:', nodeId);
+    console.log('[Detach] Current nodes:', nodes);
+  
     const oldNodes = JSON.parse(JSON.stringify(nodes));
-    let nodeToDetach = null;
-
-    const detachNode = (nodes) =>
-      nodes.map(node => ({
-        ...node,
-        children: node.children?.filter(child => {
-          if (child.id === nodeId) {
-            nodeToDetach = child;
-            return false;
-          }
-          return true;
-        }).map(detachNode),
-      }));
-
-    const updatedNodes = detachNode(nodes);
-    if (nodeToDetach) updatedNodes.push(nodeToDetach);
-
+    const [updatedNodes, detachedNode] = detachNode(nodes, nodeId);
+  
+    if (detachedNode) {
+      updatedNodes.push(detachedNode); // 👈 Make it a new top-level node
+    }
+  
     undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
     setNodes(updatedNodes);
     enqueueGraphSave(updatedNodes);
+  };
+  
+  const detachNode = (nodes, nodeId) => {
+    let detached = null;
+  
+    const updatedNodes = nodes.map(node => {
+      if (!node.children) return node;
+  
+      const newChildren = node.children.filter(child => {
+        if (child.id === nodeId) {
+          detached = child;
+          return false;
+        }
+        return true;
+      }).map(child => {
+        const [newChild, maybeDetached] = detachNode([child], nodeId);
+        if (maybeDetached) detached = maybeDetached;
+        return newChild[0];
+      });
+  
+      return {
+        ...node,
+        children: newChildren
+      };
+    });
+  
+    // Also check top-level in case the node is not inside children
+    const remaining = updatedNodes.filter(node => node.id !== nodeId);
+    if (remaining.length < updatedNodes.length) {
+      detached = updatedNodes.find(node => node.id === nodeId);
+      return [remaining, detached];
+    }
+  
+    return [updatedNodes, detached];
   };
 
 

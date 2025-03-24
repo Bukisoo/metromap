@@ -419,7 +419,7 @@ const EditorComponent = ({
                 </select>
                 <select className="ql-size">
                   <option value="12px">12</option>
-                  <option value="14px" selected>14</option>
+                  <option value="14px">14</option>
                   <option value="16px">16</option>
                   <option value="18px">18</option>
                   <option value="24px">24</option>
