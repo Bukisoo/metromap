@@ -407,34 +407,32 @@ const App = () => {
     onError
   ) => {
     try {
-      const graph = await loadGraph();
-      if (!graph || !Array.isArray(graph)) throw new Error('Failed to load the graph');
-
+      const graphCopy = JSON.parse(JSON.stringify(nodes)); // ⬅️ fix here!
+  
       const updateNoteInNodes = (nodes) => nodes.map(node => {
         if (node.id === id) return { ...node, notes: newNote };
         if (node.children) return { ...node, children: updateNoteInNodes(node.children) };
         return node;
       });
-
-      const updatedGraph = updateNoteInNodes(graph);
+  
+      const updatedGraph = updateNoteInNodes(graphCopy);
       setNodes(updatedGraph);
-
+  
       const modifiedTime = await saveGraph(updatedGraph, setSaveStatus);
-
+  
       if (modifiedTime) {
         const remoteTime = new Date(modifiedTime);
         fileVersionDateRef.current = remoteTime;
         versionCheckValidatedRef.current = true;
-        //console.log('[DEBUG] fileVersionDateRef updated from saveNodeNote:', remoteTime.toISOString());
       }
-
+  
       if (onSuccess) onSuccess();
-      //console.log("Note update successfully saved to Google Drive.");
     } catch (error) {
       console.error("Error saving note to Google Drive:", error);
       if (onError) onError();
     }
   };
+  
 
 
   const enqueueGraphSave = (updatedNodes, onSuccess = null) => {
