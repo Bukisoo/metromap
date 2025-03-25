@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/metromap/static/css/main.34a952f8.css",
-    "main.js": "/metromap/static/js/main.2770c2bb.js",
+    "main.css": "/metromap/static/css/main.0c894b2e.css",
+    "main.js": "/metromap/static/js/main.8a5478d9.js",
     "static/js/453.a966daa9.chunk.js": "/metromap/static/js/453.a966daa9.chunk.js",
     "static/media/illustration.jpg": "/metromap/static/media/illustration.d3ece8bf98e5568d5017.jpg",
     "static/media/logo.svg": "/metromap/static/media/logo.09927e89175faa7af7dfe5ec73a25728.svg",
     "index.html": "/metromap/index.html",
-    "main.34a952f8.css.map": "/metromap/static/css/main.34a952f8.css.map",
-    "main.2770c2bb.js.map": "/metromap/static/js/main.2770c2bb.js.map",
+    "main.0c894b2e.css.map": "/metromap/static/css/main.0c894b2e.css.map",
+    "main.8a5478d9.js.map": "/metromap/static/js/main.8a5478d9.js.map",
     "453.a966daa9.chunk.js.map": "/metromap/static/js/453.a966daa9.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.34a952f8.css",
-    "static/js/main.2770c2bb.js"
+    "static/css/main.0c894b2e.css",
+    "static/js/main.8a5478d9.js"
   ]
 }
