@@ -38,7 +38,8 @@ const GraphComponent = ({
   setUsedColors,
   undoAction,
   undoStack,
-  updateGraph
+  updateGraph,
+  canUndo
 }) => {
   const svgRef = useRef(null);
   const simulationRef = useRef(null);
@@ -600,34 +601,34 @@ const GraphComponent = ({
       } else {
         setIsDragging(false); // Only set to false if timeout was triggered
       }
-    
+
       if (!event.active) simulationRef.current.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-    
+
       // Exit early if bin or node element can't be resolved properly
       if (!binButtonRef.current || typeof d.x !== 'number' || typeof d.y !== 'number') return;
-    
+
       const binBounds = binButtonRef.current.getBoundingClientRect();
-    
+
       // Convert graph coordinates to screen coordinates
       const svgRect = svgRef.current.getBoundingClientRect();
       const zoomTransform = zoomRef.current;
       const screenX = svgRect.left + (zoomTransform.x + d.x * zoomTransform.k);
       const screenY = svgRect.top + (zoomTransform.y + d.y * zoomTransform.k);
-    
+
       const margin = 8; // Add a small margin of forgiveness
       const isOverBin =
         screenX + margin > binBounds.left &&
         screenX - margin < binBounds.right &&
         screenY + margin > binBounds.top &&
         screenY - margin < binBounds.bottom;
-    
+
       if (isOverBin) {
         confirmAndRemoveNode(d);
         return;
       }
-    
+
       // Attempt to connect to nearby nodes
       const targetNode = flatNodes.find(node => {
         if (node.id !== d.id) {
@@ -637,11 +638,11 @@ const GraphComponent = ({
         }
         return false;
       });
-    
+
       if (targetNode) {
         connectNodes(d, targetNode);
       }
-    }      
+    }
   };
 
   const applyGlowEffect = () => {
@@ -707,12 +708,6 @@ const GraphComponent = ({
 
     const updatedNodes = [...nodes, newNode];
 
-    undoStack.current.push({
-      type: 'add_node',
-      previousState: oldNodes,
-      newState: updatedNodes,
-    });
-
     updateGraph(updatedNodes);
 
     if (simulationRef.current) {
@@ -758,12 +753,6 @@ const GraphComponent = ({
 
     setNodes(prevNodes => {
       const updatedNodes = removeNodeAndChildren(prevNodes);
-
-      undoStack.current.push({
-        type: 'remove_node',
-        previousState: oldNodes,
-        newState: updatedNodes,
-      });
 
       if (isEditorVisible) {
         setIsEditorVisible(false);
@@ -818,7 +807,6 @@ const GraphComponent = ({
   };
 
   const connectNodes = (sourceNode, targetNode) => {
-    const oldNodes = JSON.parse(JSON.stringify(nodes)); // Deep clone for undo
     const currentZoom = zoomRef.current;
 
     if (sourceNode.id === targetNode.id || sourceNode.id === 'main') return;
@@ -874,13 +862,6 @@ const GraphComponent = ({
 
     // Attach the cloned source node to the target node
     updatedNodes = attachNodeToTarget(updatedNodes, clonedSourceNode, targetNode.id);
-
-    // Push the action to the undo stack
-    undoStack.current.push({
-      type: 'connect_nodes',
-      previousState: oldNodes,
-      newState: updatedNodes,
-    });
 
     // Update the graph state and save
     updateGraph(updatedNodes);
@@ -948,7 +929,7 @@ const GraphComponent = ({
   return (
     <>
       <svg id="graph-svg" ref={svgRef}></svg>
-      
+
       <div className="retro-button-container">
         <RetroButton
           iconPath={addIconPath}
@@ -967,10 +948,9 @@ const GraphComponent = ({
         />
         <RetroButton
           iconPath={undoIconPath}
-          onClick={undoStack.current.length === 0 ? undefined : undoAction}
-          isNotActive={undoStack.current.length === 0}
+          onClick={canUndo ? undoAction : undefined}
+          isNotActive={!canUndo}
         />
-
       </div>
     </>
   );

@@ -14,6 +14,7 @@ import logo from './logo.svg'; // Replace with your actual logo path
 import PrivacyPolicy from './PrivacyPolicy'; // New component
 import CornerSpinner from './CornerSpinner';
 import ConflictModal from './ConflictModal';
+import LZString from 'lz-string';
 
 
 const FILE_NAME = 'MetroMapData.json';
@@ -201,98 +202,13 @@ const sanitizeGraph = (nodes) => {
   });
 };
 
-const saveGraph = async (graph, setSaveStatus) => {
-  const sanitizedGraph = sanitizeGraph(graph);
-
-  if (!gapi.client.drive) {
-    console.error("Google Drive API client not initialized.");
-    throw new Error("Drive client not initialized");
-  }
-
-  const response = await gapi.client.drive.files.list({
-    q: `name='${FILE_NAME}' and trashed=false`,
-    fields: 'files(id)',
-  });
-
-  const fileId = response.result.files?.[0]?.id;
-
-  const metadata = {
-    name: FILE_NAME,
-    mimeType: 'application/json',
-  };
-
-  const multipartRequestBody =
-    "\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" +
-    JSON.stringify(metadata) +
-    "\r\n--boundary\r\nContent-Type: application/json\r\n\r\n" +
-    JSON.stringify(sanitizedGraph) +
-    "\r\n--boundary--";
-
-  const requestPath = fileId
-    ? `/upload/drive/v3/files/${fileId}`
-    : '/upload/drive/v3/files';
-
-  const startTime = Date.now();
-
-  const result = await gapi.client.request({
-    path: requestPath,
-    method: fileId ? 'PATCH' : 'POST',
-    params: {
-      uploadType: 'multipart',
-      fields: 'id, modifiedTime' // <- crucial for immediate timestamp update
-    },
-    headers: { 'Content-Type': 'multipart/related; boundary=boundary' },
-    body: multipartRequestBody,
-  });
-
-  const endTime = Date.now();
-  console.log(`Graph saved to Google Drive in ${endTime - startTime}ms`);
-
-  return result.result?.modifiedTime;
+const storeSnapshot = (graph) => {
+  const history = JSON.parse(localStorage.getItem('graphHistory') || '[]');
+  history.push(graph);
+  // Optionally limit history length
+  if (history.length > 100) history.shift();
+  localStorage.setItem('graphHistory', JSON.stringify(history));
 };
-
-const saveNodeNote = async (
-  id,
-  newNote,
-  setNodes,
-  setSaveStatus,
-  fileVersionDateRef,
-  versionCheckValidatedRef,
-  onSuccess,
-  onError
-) => {
-  try {
-    const graph = await loadGraph();
-    if (!graph || !Array.isArray(graph)) throw new Error('Failed to load the graph');
-
-    const updateNoteInNodes = (nodes) => nodes.map(node => {
-      if (node.id === id) return { ...node, notes: newNote };
-      if (node.children) return { ...node, children: updateNoteInNodes(node.children) };
-      return node;
-    });
-
-    const updatedGraph = updateNoteInNodes(graph);
-    setNodes(updatedGraph);
-
-    const modifiedTime = await saveGraph(updatedGraph, setSaveStatus);
-
-    if (modifiedTime) {
-      const remoteTime = new Date(modifiedTime);
-      fileVersionDateRef.current = remoteTime;
-      versionCheckValidatedRef.current = true;
-      //console.log('[DEBUG] fileVersionDateRef updated from saveNodeNote:', remoteTime.toISOString());
-    }    
-
-    if (onSuccess) onSuccess();
-    //console.log("Note update successfully saved to Google Drive.");
-  } catch (error) {
-    console.error("Error saving note to Google Drive:", error);
-    if (onError) onError();
-  }
-};
-
-
-
 
 const App = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -305,7 +221,8 @@ const App = () => {
   const [stations, setStations] = useState([]);
   const [usedColors, setUsedColors] = useState([]);
   const undoStack = useRef([]); // For storing undo actions
-  const maxUndoActions = 10; // Limit to the last 10 actions
+  const undoHistoryRef = useRef([]);
+  const [undoCount, setUndoCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState('saved');
   const [isOffline, setIsOffline] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -319,6 +236,7 @@ const App = () => {
   const lastCheckTimeRef = useRef(Date.now());
   const [conflictDetected, setConflictDetected] = useState(false);
   const versionCheckValidatedRef = useRef(false);
+  const canUndo = undoHistoryRef.current.length > 1;
 
 
   useEffect(() => {
@@ -344,7 +262,7 @@ const App = () => {
       const timeSinceInput = now - lastUserInputRef.current;
       const timeSinceCheck = now - lastCheckTimeRef.current;
 
-      if (timeSinceInput < 10000 && timeSinceCheck > 10000) {
+      if (timeSinceInput < 10000 && timeSinceCheck > 60000) {
         //console.log('[DEBUG] User active, checking remote version...');
         lastCheckTimeRef.current = now;
 
@@ -414,13 +332,112 @@ const App = () => {
     if (modTime) fileVersionDateRef.current = new Date(modTime);
   };
 
+  const saveGraph = async (graph, setSaveStatus) => {
+    const sanitizedGraph = sanitizeGraph(graph);
+
+    if (undoHistoryRef.current) {
+      const json = JSON.stringify(sanitizedGraph);
+      const compressed = LZString.compress(json);
+      undoHistoryRef.current.push(compressed);
+
+      if (undoHistoryRef.current.length > 10) {
+        undoHistoryRef.current.shift();
+      }
+
+      setUndoCount(undoHistoryRef.current.length);
+    }
+
+    console.log('[UNDO] Undo count is now:', undoHistoryRef.current.length)
+
+    if (!gapi.client.drive) {
+      console.error("Google Drive API client not initialized.");
+      throw new Error("Drive client not initialized");
+    }
+
+    const response = await gapi.client.drive.files.list({
+      q: `name='${FILE_NAME}' and trashed=false`,
+      fields: 'files(id)',
+    });
+
+    const fileId = response.result.files?.[0]?.id;
+
+    const metadata = {
+      name: FILE_NAME,
+      mimeType: 'application/json',
+    };
+
+    const multipartRequestBody =
+      "\r\n--boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" +
+      JSON.stringify(metadata) +
+      "\r\n--boundary\r\nContent-Type: application/json\r\n\r\n" +
+      JSON.stringify(sanitizedGraph) +
+      "\r\n--boundary--";
+
+    const requestPath = fileId
+      ? `/upload/drive/v3/files/${fileId}`
+      : '/upload/drive/v3/files';
+
+    const startTime = Date.now();
+
+    const result = await gapi.client.request({
+      path: requestPath,
+      method: fileId ? 'PATCH' : 'POST',
+      params: {
+        uploadType: 'multipart',
+        fields: 'id, modifiedTime'
+      },
+      headers: { 'Content-Type': 'multipart/related; boundary=boundary' },
+      body: multipartRequestBody,
+    });
+
+    const endTime = Date.now();
+    console.log(`Graph saved to Google Drive in ${endTime - startTime}ms`);
+
+    return result.result?.modifiedTime;
+  };
+
+  const saveNodeNote = async (
+    id,
+    newNote,
+    setNodes,
+    setSaveStatus,
+    fileVersionDateRef,
+    versionCheckValidatedRef,
+    onSuccess,
+    onError
+  ) => {
+    try {
+      const graph = await loadGraph();
+      if (!graph || !Array.isArray(graph)) throw new Error('Failed to load the graph');
+
+      const updateNoteInNodes = (nodes) => nodes.map(node => {
+        if (node.id === id) return { ...node, notes: newNote };
+        if (node.children) return { ...node, children: updateNoteInNodes(node.children) };
+        return node;
+      });
+
+      const updatedGraph = updateNoteInNodes(graph);
+      setNodes(updatedGraph);
+
+      const modifiedTime = await saveGraph(updatedGraph, setSaveStatus);
+
+      if (modifiedTime) {
+        const remoteTime = new Date(modifiedTime);
+        fileVersionDateRef.current = remoteTime;
+        versionCheckValidatedRef.current = true;
+        //console.log('[DEBUG] fileVersionDateRef updated from saveNodeNote:', remoteTime.toISOString());
+      }
+
+      if (onSuccess) onSuccess();
+      //console.log("Note update successfully saved to Google Drive.");
+    } catch (error) {
+      console.error("Error saving note to Google Drive:", error);
+      if (onError) onError();
+    }
+  };
 
 
   const enqueueGraphSave = (updatedNodes, onSuccess = null) => {
-    if (!versionCheckValidatedRef.current) {
-      console.warn('[BLOCKED] Save attempt before version check!');
-      return; // ⛔ Prevent save
-    }
     saveQueueRef.current.push({ graph: updatedNodes, onSuccess });
     setSaveStatus('saving');
     processSaveQueue();
@@ -550,7 +567,7 @@ const App = () => {
         if (graph.length === 0) {
           graph = initialGraph(fetchedStations);
           await saveGraph(graph, setSaveStatus);
-        
+
           // ⬇️ Update the version timestamp after the first save
           const meta = await gapi.client.drive.files.list({
             q: `name='${FILE_NAME}' and trashed=false`,
@@ -558,11 +575,15 @@ const App = () => {
           });
           const remoteTime = new Date(meta.result.files?.[0]?.modifiedTime);
           fileVersionDateRef.current = remoteTime;
+          versionCheckValidatedRef.current = true;
           //console.log('[DEBUG] fileVersionDateRef set after initial graph save:', remoteTime.toISOString());
         }
-        
+
 
         setNodes(graph);
+        const initialCompressed = LZString.compress(JSON.stringify(graph));
+        undoHistoryRef.current = [initialCompressed];
+        setUndoCount(0);
         setIsGraphLoaded(true); // Mark the graph as loaded
       } catch (error) {
         console.error("Error loading and initializing the graph:", error);
@@ -576,12 +597,21 @@ const App = () => {
 
   // Handle undo operation
   const undoAction = () => {
-    if (undoStack.current.length > 0) {
-      const lastAction = undoStack.current.pop();
-      if (lastAction.previousState) {
-        setNodes(lastAction.previousState);
-        enqueueGraphSave(lastAction.previousState);
-      }
+    if (undoHistoryRef.current.length <= 1) return;
+
+    // Remove current snapshot
+    undoHistoryRef.current.pop();
+
+    const compressed = undoHistoryRef.current[undoHistoryRef.current.length - 1];
+    const json = LZString.decompress(compressed); // 🔓 decompress
+    const previous = JSON.parse(json);
+
+    if (previous) {
+      setNodes(previous);
+      setUndoCount(undoHistoryRef.current.length);
+      setSelectedNode(null);
+      setIsEditorVisible(false);
+      // enqueueGraphSave(previous); // optional
     }
   };
 
@@ -595,28 +625,28 @@ const App = () => {
       console.error('[DetachNode] nodes is not an array:', nodes);
       return;
     }
-  
+
     console.log('[Detach] Selected node:', nodeId);
     console.log('[Detach] Current nodes:', nodes);
-  
+
     const oldNodes = JSON.parse(JSON.stringify(nodes));
     const [updatedNodes, detachedNode] = detachNode(nodes, nodeId);
-  
+
     if (detachedNode) {
       updatedNodes.push(detachedNode); // 👈 Make it a new top-level node
     }
-  
+
     undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
     setNodes(updatedNodes);
     enqueueGraphSave(updatedNodes);
   };
-  
+
   const detachNode = (nodes, nodeId) => {
     let detached = null;
-  
+
     const updatedNodes = nodes.map(node => {
       if (!node.children) return node;
-  
+
       const newChildren = node.children.filter(child => {
         if (child.id === nodeId) {
           detached = child;
@@ -628,23 +658,22 @@ const App = () => {
         if (maybeDetached) detached = maybeDetached;
         return newChild[0];
       });
-  
+
       return {
         ...node,
         children: newChildren
       };
     });
-  
+
     // Also check top-level in case the node is not inside children
     const remaining = updatedNodes.filter(node => node.id !== nodeId);
     if (remaining.length < updatedNodes.length) {
       detached = updatedNodes.find(node => node.id === nodeId);
       return [remaining, detached];
     }
-  
+
     return [updatedNodes, detached];
   };
-
 
   const updateNodeProperty = (id, property, value, onSuccess, onError) => {
     const oldNodes = JSON.parse(JSON.stringify(nodes));
@@ -654,8 +683,6 @@ const App = () => {
         if (node.id === id) {
           if (property === 'color') {
             node = updateNodeAndChildrenColors(node, value, node.color);
-            undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
-            setNodes(updatedNodes);
           }
           return { ...node, [property]: value };
         }
@@ -663,7 +690,10 @@ const App = () => {
         return node;
       });
 
-      const updatedNodes = updateNodes(nodes);
+    const updatedNodes = updateNodes(nodes);
+
+
+    setNodes(updatedNodes);
 
     if (property === 'notes') {
       saveNodeNote(
@@ -675,7 +705,7 @@ const App = () => {
         versionCheckValidatedRef,
         onSuccess,
         onError
-      );      
+      );
     } else {
       enqueueGraphSave(updatedNodes, onSuccess);
     }
@@ -789,6 +819,8 @@ const App = () => {
                     updateGraph={updateGraph}
                     undoStack={undoStack}
                     undoAction={undoAction}
+                    undoCount={undoCount}
+                    canUndo={canUndo}
                   />
                   {(isSaving || saveQueueRef.current.length > 0) && <CornerSpinner />}
                 </div>
