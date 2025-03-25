@@ -9,5 +9,6 @@
     pointer-events: none;
     font-family: 'Courier New', monospace;
     line-height: 1;
+    user-select: none;
   }
   

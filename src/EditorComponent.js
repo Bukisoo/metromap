@@ -34,7 +34,7 @@ const EditorComponent = ({
   onNodeChange,
   handleDetachNode,
   undoStack,
-  nodes  
+  nodes
 }) => {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null); // Ref for Quill toolbar
@@ -119,13 +119,13 @@ const EditorComponent = ({
         undoStack.current.push({ previousState: snapshot });
         contentModifiedRef.current = true; // Prevent multiple pushes
       }
-  
+
       const content = quillRef.current.root.innerHTML;
       setSaveStatus('saving');
       debouncedSaveContent(content, lastLoadedNodeIdRef.current);
     }
   }, [debouncedSaveContent, isLoading, nodes, undoStack]);
-  
+
 
   const initializeQuill = useCallback(() => {
     if (editorRef.current && !quillRef.current) {
@@ -184,6 +184,20 @@ const EditorComponent = ({
     }
   }, []);
 
+  const cleanLineBreaks = (html) => {
+    // Replace multiple <br> tags with just one
+    html = html.replace(/(<br\s*\/?>\s*){2,}/g, '<br>');
+
+    // Replace empty paragraphs with a single line break
+    html = html.replace(/<p>\s*<\/p>/g, '<br>');
+
+    // Remove leading/trailing excessive breaks
+    html = html.replace(/^(<br\s*\/?>)+/, '');
+    html = html.replace(/(<br\s*\/?>)+$/, '');
+
+    return html;
+  };
+
   const loadContent = useCallback(
     (content) => {
       if (quillRef.current) {
@@ -191,9 +205,10 @@ const EditorComponent = ({
         isInitialLoadRef.current = true;
         setSaveStatus('loading');
 
-        const sanitizedContent = DOMPurify.sanitize(content);
+        const sanitizedContent = cleanLineBreaks(DOMPurify.sanitize(content));
         quillRef.current.setContents([]); // Clears previous content safely
         quillRef.current.clipboard.dangerouslyPasteHTML(0, sanitizedContent);
+
 
 
         setLoadingProgress(100);
