@@ -141,6 +141,16 @@ const EditorComponent = ({
         return new Delta();
       });
 
+      quillRef.current.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+        // Remove excessive blank lines
+        const cleanedOps = delta.ops.filter(op => {
+          return !(typeof op.insert === 'string' && op.insert.match(/^\s*\n\s*$/));
+        });
+
+        return new Delta(cleanedOps);
+      });
+
+
       quillRef.current.on('text-change', handleTextChange);
     }
   }, [handleTextChange]);
@@ -164,7 +174,9 @@ const EditorComponent = ({
         setSaveStatus('loading');
 
         const sanitizedContent = DOMPurify.sanitize(content);
-        quillRef.current.root.innerHTML = sanitizedContent;
+        quillRef.current.setContents([]); // Clears previous content safely
+        quillRef.current.clipboard.dangerouslyPasteHTML(0, sanitizedContent);
+
 
         setLoadingProgress(100);
         setTimeout(() => {

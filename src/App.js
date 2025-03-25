@@ -48,59 +48,102 @@ const initialGraph = (stations) => {
   return [
     {
       id: 'main',
-      name: combinedStations[0],
+      name: 'Welcome to MetroMap',
       color: accentColor,
-      notes: '',
+      notes: `
+        <h1>Welcome to MetroMap</h1>
+        <p>You’re in! Every station is a note, every line a path of thought.</p>
+        <p>This app is all about <strong>structure</strong>, <strong>clarity</strong>, and <strong>flow</strong>.</p>
+        <p><strong>Click on the next station:</strong> <em>How it works</em></p>
+      `,
       children: [
         {
           id: 'child-1',
-          name: combinedStations[1],
+          name: 'How it works',
           color: retroBlue,
-          notes: '',
+          notes: `
+            <h2>How it works</h2>
+            <p>Each circle is a <strong>note</strong>. You can edit the <strong>title</strong> directly and write inside using the panel on the right.</p>
+            <p>You can drag one node onto another to connect them. This builds a structure — like a real metro map.</p>
+            <p><strong>Click on:</strong> <em>Tips & Tricks</em></p>
+          `,
           children: [
             {
               id: 'subchild-1-1',
-              name: combinedStations[2],
+              name: 'Tips & Tricks',
               color: retroBlue,
-              notes: '',
+              notes: `
+                <h2>Tips & Tricks</h2>
+                <p><strong>+ button:</strong> Creates a new unconnected node.</p>
+                <p><strong>Drag to connect:</strong> Drop it onto another node to link them.</p>
+                <p>Nodes repel each other a little — <em>push them in!</em> If they connect, you’ll see a line appear.</p>
+                <p><strong>Next:</strong> <em>Editor Features</em></p>
+              `,
               children: []
             },
             {
               id: 'subchild-1-2',
-              name: combinedStations[3],
+              name: 'Editor Features',
               color: retroBlue,
-              notes: '',
+              notes: `
+                <h2>Rich Text Editor</h2>
+                <p>MetroMap’s editor supports:</p>
+                <p><strong>Bold</strong>, <em>Italic</em>, <u>Underline</u>, <code>Code blocks</code>, <span class="hljs-keyword">Hyperlinks</span>, and more.</p>
+                <p>Use it to write clean notes or longform text without losing flow.</p>
+                <p><strong>Next:</strong> <em>Search & Navigation</em></p>
+              `,
               children: []
             }
           ]
         },
         {
           id: 'child-2',
-          name: combinedStations[4],
+          name: 'Search & Navigation',
           color: retroPink,
-          notes: '',
+          notes: `
+            <h2>Search & Navigation</h2>
+            <p>Click the <strong>orange tab</strong> on the left to open the side menu.</p>
+            <p>You can search for any station by name and jump directly to it.</p>
+            <p>You can also view or restore other graphs from here.</p>
+            <p><strong>Next:</strong> <em>Detach & Delete</em></p>
+          `,
           children: [
             {
               id: 'subchild-2-1',
-              name: combinedStations[5],
+              name: 'Detach & Delete',
               color: retroPink,
-              notes: '',
+              notes: `
+                <h2>Detach & Delete</h2>
+                <p><strong>Delete:</strong> Select a node and click the trash icon. It will delete the node <em>and its children</em>.</p>
+                <p><strong>Undo</strong> is available if you made a mistake.</p>
+                <p><strong>Detach:</strong> Turns a node into a completely separate graph. Use it to split unrelated topics.</p>
+                <p><strong>Next:</strong> <em>Collapse & Clarity</em></p>
+              `,
               children: []
             },
             {
               id: 'subchild-2-2',
-              name: combinedStations[6],
+              name: 'Collapse & Clarity',
               color: retroPink,
-              notes: '',
+              notes: `
+                <h2>Collapse Children</h2>
+                <p>If a node has many children, click the <strong>eye icon</strong> to hide them.</p>
+                <p>It helps clean up the view and focus on what matters.</p>
+                <p><strong>Next:</strong> <em>You're ready!</em></p>
+              `,
               children: []
             }
           ]
         },
         {
           id: 'child-3',
-          name: combinedStations[7],
+          name: "You're ready!",
           color: retroYellow,
-          notes: '',
+          notes: `
+            <h2>You're all set!</h2>
+            <p>This graph was your onboarding — now you can delete or detach it to make space for your own ideas.</p>
+            <p>Start building. Every note is a station. Every connection reveals a vision.</p>
+          `,
           children: []
         }
       ],
@@ -191,58 +234,63 @@ const saveGraph = async (graph, setSaveStatus) => {
 
   const startTime = Date.now();
 
-  await gapi.client.request({
+  const result = await gapi.client.request({
     path: requestPath,
     method: fileId ? 'PATCH' : 'POST',
-    params: { uploadType: 'multipart' },
+    params: {
+      uploadType: 'multipart',
+      fields: 'id, modifiedTime' // <- crucial for immediate timestamp update
+    },
     headers: { 'Content-Type': 'multipart/related; boundary=boundary' },
     body: multipartRequestBody,
   });
 
   const endTime = Date.now();
   console.log(`Graph saved to Google Drive in ${endTime - startTime}ms`);
+
+  return result.result?.modifiedTime;
 };
 
-
-
-
-
-const saveNodeNote = async (id, newNote, setNodes, setSaveStatus, onSuccess, onError) => {
+const saveNodeNote = async (
+  id,
+  newNote,
+  setNodes,
+  setSaveStatus,
+  fileVersionDateRef,
+  versionCheckValidatedRef,
+  onSuccess,
+  onError
+) => {
   try {
-    // Step 1: Load the current graph from Google Drive
     const graph = await loadGraph();
+    if (!graph || !Array.isArray(graph)) throw new Error('Failed to load the graph');
 
-    if (!graph || !Array.isArray(graph)) {
-      throw new Error('Failed to load the graph');
-    }
-
-    // Step 2: Find and update the specific node in the graph
-    const updateNoteInNodes = (nodes) => {
-      return nodes.map(node => {
-        if (node.id === id) {
-          return { ...node, notes: newNote }; // Update the note for the matching node
-        } else if (node.children) {
-          return { ...node, children: updateNoteInNodes(node.children) }; // Recursively update children
-        }
-        return node;
-      });
-    };
+    const updateNoteInNodes = (nodes) => nodes.map(node => {
+      if (node.id === id) return { ...node, notes: newNote };
+      if (node.children) return { ...node, children: updateNoteInNodes(node.children) };
+      return node;
+    });
 
     const updatedGraph = updateNoteInNodes(graph);
+    setNodes(updatedGraph);
 
-    // Update the local state
-    setNodes(updatedGraph); // This line expects setNodes to be a valid function
+    const modifiedTime = await saveGraph(updatedGraph, setSaveStatus);
 
-    // Step 3: Save the updated graph back to Google Drive
-    await saveGraph(updatedGraph, setSaveStatus, null, onSuccess);
+    if (modifiedTime) {
+      const remoteTime = new Date(modifiedTime);
+      fileVersionDateRef.current = remoteTime;
+      versionCheckValidatedRef.current = true;
+      //console.log('[DEBUG] fileVersionDateRef updated from saveNodeNote:', remoteTime.toISOString());
+    }    
+
     if (onSuccess) onSuccess();
-
-    console.log("Note update successfully saved to Google Drive.");
+    //console.log("Note update successfully saved to Google Drive.");
   } catch (error) {
     console.error("Error saving note to Google Drive:", error);
     if (onError) onError();
   }
 };
+
 
 
 
@@ -297,7 +345,7 @@ const App = () => {
       const timeSinceCheck = now - lastCheckTimeRef.current;
 
       if (timeSinceInput < 10000 && timeSinceCheck > 10000) {
-        console.log('[DEBUG] User active, checking remote version...');
+        //console.log('[DEBUG] User active, checking remote version...');
         lastCheckTimeRef.current = now;
 
         try {
@@ -311,20 +359,20 @@ const App = () => {
           const remoteTime = new Date(modifiedStr);
           const localTime = fileVersionDateRef.current;
 
-          console.log('[DEBUG] Remote modified time:', remoteTime.toISOString());
-          console.log('[DEBUG] Local fileVersionDateRef:', localTime?.toISOString());
+          //console.log('[DEBUG] Remote modified time:', remoteTime.toISOString());
+          //console.log('[DEBUG] Local fileVersionDateRef:', localTime?.toISOString());
 
           if (localTime && remoteTime.getTime() > localTime.getTime()) {
-            console.warn('[DEBUG] Conflict detected: remote version is newer.');
+            //console.warn('[DEBUG] Conflict detected: remote version is newer.');
             setConflictDetected(true);
           } else {
             versionCheckValidatedRef.current = true;
           }
         } catch (e) {
-          console.error("[DEBUG] Version check failed", e);
+          //console.error("[DEBUG] Version check failed", e);
         }
       } else {
-        console.log('[DEBUG] No interaction or not enough time passed – skipping check.');
+        //console.log('[DEBUG] No interaction or not enough time passed – skipping check.');
       }
     }, 5000); // Still check every 5s, logic inside prevents API spam
     return () => clearInterval(interval);
@@ -346,7 +394,7 @@ const App = () => {
       });
       const remoteTime = new Date(meta.result.files?.[0]?.modifiedTime);
       fileVersionDateRef.current = remoteTime;
-      console.log('[DEBUG] fileVersionDateRef updated after loading:', remoteTime.toISOString());
+      //console.log('[DEBUG] fileVersionDateRef updated after loading:', remoteTime.toISOString());
     }
     else if (choice === 'overwrite') {
       await saveGraph(nodes, setSaveStatus);
@@ -510,7 +558,7 @@ const App = () => {
           });
           const remoteTime = new Date(meta.result.files?.[0]?.modifiedTime);
           fileVersionDateRef.current = remoteTime;
-          console.log('[DEBUG] fileVersionDateRef set after initial graph save:', remoteTime.toISOString());
+          //console.log('[DEBUG] fileVersionDateRef set after initial graph save:', remoteTime.toISOString());
         }
         
 
@@ -619,7 +667,16 @@ const App = () => {
     setNodes(updatedNodes);
 
     if (property === 'notes') {
-      saveNodeNote(id, value, setNodes, setSaveStatus, onSuccess, onError);
+      saveNodeNote(
+        id,
+        value,
+        setNodes,
+        setSaveStatus,
+        fileVersionDateRef,
+        versionCheckValidatedRef,
+        onSuccess,
+        onError
+      );      
     } else {
       enqueueGraphSave(updatedNodes, onSuccess);
     }

@@ -35,7 +35,7 @@ const fetchStationsFromAPI = async (latitude, longitude, minStations = 8) => {
       .map(element => element.tags.name)
       .filter(name => name && name.split(' ').length <= 3);
 
-    console.log(`Fetched stations with radius ${radius / 1000}km:`, stationNames);
+    //console.log(`Fetched stations with radius ${radius / 1000}km:`, stationNames);
     radius += radiusIncrement; // Increase the search radius for the next attempt
   }
 

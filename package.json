@@ -33,7 +33,8 @@
     "start": "cross-env HTTPS=true SSL_CRT_FILE=./server.crt SSL_KEY_FILE=./server.key react-scripts start",
     "build": "react-scripts build",
     "predeploy": "npm run build && echo > build/.nojekyll",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "count": "\"C:\\Users\\Lucas\\cloc-2.04.exe\" src"
   },
   "eslintConfig": {
     "extends": [
