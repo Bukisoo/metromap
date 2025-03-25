@@ -33,6 +33,8 @@ const EditorComponent = ({
   setIsOpen,
   onNodeChange,
   handleDetachNode,
+  undoStack,
+  nodes  
 }) => {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null); // Ref for Quill toolbar
@@ -112,12 +114,18 @@ const EditorComponent = ({
 
   const handleTextChange = useCallback(() => {
     if (!isLoading && !isInitialLoadRef.current) {
-      contentModifiedRef.current = true;
+      if (!contentModifiedRef.current && undoStack && nodes) {
+        const snapshot = JSON.parse(JSON.stringify(nodes));
+        undoStack.current.push({ previousState: snapshot });
+        contentModifiedRef.current = true; // Prevent multiple pushes
+      }
+  
       const content = quillRef.current.root.innerHTML;
       setSaveStatus('saving');
       debouncedSaveContent(content, lastLoadedNodeIdRef.current);
     }
-  }, [debouncedSaveContent, isLoading]);
+  }, [debouncedSaveContent, isLoading, nodes, undoStack]);
+  
 
   const initializeQuill = useCallback(() => {
     if (editorRef.current && !quillRef.current) {
@@ -142,14 +150,24 @@ const EditorComponent = ({
       });
 
       quillRef.current.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-        // Remove excessive blank lines
-        const cleanedOps = delta.ops.filter(op => {
-          return !(typeof op.insert === 'string' && op.insert.match(/^\s*\n\s*$/));
+        const normalizedOps = [];
+        let lastInsertWasNewline = false;
+
+        delta.ops.forEach(op => {
+          if (typeof op.insert === 'string' && op.insert === '\n') {
+            if (!lastInsertWasNewline) {
+              normalizedOps.push(op);
+              lastInsertWasNewline = true;
+            }
+            // skip if this is a duplicate newline
+          } else {
+            normalizedOps.push(op);
+            lastInsertWasNewline = false;
+          }
         });
 
-        return new Delta(cleanedOps);
+        return new Delta(normalizedOps);
       });
-
 
       quillRef.current.on('text-change', handleTextChange);
     }

@@ -34,7 +34,13 @@ const LandingPage = ({ onLoginSuccess }) => {
   };
 
   const handleLogin = () => {
-    gapi.auth2.getAuthInstance().signIn();
+    const authInstance = gapi.auth2.getAuthInstance();
+    authInstance.signIn().then(() => {
+      // This triggers even if it's the first time and permissions are asked
+      updateSigninStatus(authInstance.isSignedIn.get());
+    }).catch((err) => {
+      console.error('Sign-in error:', err);
+    });
   };
 
   return (
@@ -71,7 +77,18 @@ const LandingPage = ({ onLoginSuccess }) => {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <p>© {new Date().getFullYear()} MetroMap. All rights reserved.</p>
+        <p>
+          © {new Date().getFullYear()} MetroMap. All rights reserved.
+          {' '}
+          <a
+            href="/#/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: '0.85em', color: 'gray',}}
+          >
+            Privacy Policy
+          </a>
+        </p>
       </footer>
     </div>
   );

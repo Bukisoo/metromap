@@ -654,6 +654,8 @@ const App = () => {
         if (node.id === id) {
           if (property === 'color') {
             node = updateNodeAndChildrenColors(node, value, node.color);
+            undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
+            setNodes(updatedNodes);
           }
           return { ...node, [property]: value };
         }
@@ -661,10 +663,7 @@ const App = () => {
         return node;
       });
 
-    const updatedNodes = updateNodes(nodes);
-
-    undoStack.current.push({ previousState: oldNodes, newState: updatedNodes });
-    setNodes(updatedNodes);
+      const updatedNodes = updateNodes(nodes);
 
     if (property === 'notes') {
       saveNodeNote(
