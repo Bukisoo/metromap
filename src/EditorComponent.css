@@ -234,7 +234,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--accent-color); /* Ensures consistency */
+  background: var(--editor-background); /* Ensures consistency */
   /* Removed fixed height to allow growth */
   /* Added flex-wrap to allow wrapping */
   flex-wrap: wrap;
@@ -531,54 +531,72 @@
   height: 5px; /* Set height when active */
 }
 
+.mobile-only {
+  display: none !important;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-  .editor-header {
-    padding: 0; /* Already removed */
+  .mobile-only {
+    display: inline-block !important;
   }
 
-
-  .editor-title {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 10px;
-    font-size: 20px; /* Smaller font for smaller screens */
+  .close-editor-button {
+    background: #999; /* gray tone for contrast */
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    width: 50px;
+    font-weight: bold;
+    font-family: 'EB Garamond', serif;
+    cursor: pointer;
+    margin: 0 10px;
+    height: 130%;
+    flex-grow: 1;
   }
 
-  .color-pastille-container {
-    display: flex;
-    flex-wrap: wrap;
+  .close-editor-button:hover {
+    background: #666;
+  }
+
+  .editor-container {
+    border-left: none !important;
+    width: 100% !important;
+  }
+
+  .resizer {
+    display: none !important;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
   }
 
   .editor-bottom-row {
-    flex-direction: column;
-    align-items: flex-start;
-    background-color: var(--editor-background); /* Ensure background remains brown */
-    height: auto; /* Allow height to adjust */
-  }
-
-  .quill-toolbar {
-    width: 100%;
-    margin-bottom: 10px;
-    /* Center toolbar items vertically */
+    flex-direction: row;
+    justify-content: space-between;
     align-items: center;
+    background-color: var(--editor-background);
   }
 
+  .editor-title {
+    margin-left: 10px;
+  }
   .editor-buttons {
-    width: 100%;
-    justify-content: flex-start;
-    background-color: var(--editor-background); /* Ensure brown background remains */
-    height: auto; /* Adjust height for stacked layout */
-    gap: 10px; /* Add space between buttons */
+    width: auto;
+    flex-direction: row;
+    padding: 10px 10px;
+    height: auto;
+    background-color: transparent;
+    flex-grow: 1;
   }
 
   .detach-node-button,
   .save-indicator {
-    margin-left: 0;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    height: 40px; /* Ensure same height */
-    padding-top: 0; /* Remove vertical padding */
-    padding-bottom: 0; /* Remove vertical padding */
+    margin: 0 10px;
+    height: 130%;
+    font-size: 14px;
+    flex-grow: 1;
   }
 }

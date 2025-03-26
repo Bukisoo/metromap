@@ -422,7 +422,9 @@ const EditorComponent = ({
               onKeyDown={handleTitleKeyDown}
               data-placeholder="Enter title..."
             />
-            <div className="color-pastille-container">
+
+            {/* Only show color pickers on desktop */}
+            <div className="color-pastille-container hide-on-mobile">
               {colorOptions.map((color, index) => (
                 <div
                   key={index}
@@ -448,10 +450,11 @@ const EditorComponent = ({
             </div>
           </div>
 
+
           {/* Bottom Row: Quill Toolbar and Buttons */}
           <div className="editor-bottom-row">
             {/* Quill Toolbar */}
-            <div className="quill-toolbar" ref={toolbarRef}>
+            <div className="quill-t hide-on-mobile" ref={toolbarRef}>
               {/* Define toolbar buttons here */}
               <span className="ql-formats">
                 <select className="ql-font" defaultValue="garamond">
@@ -490,6 +493,14 @@ const EditorComponent = ({
 
             {/* Buttons */}
             <div className="editor-buttons">
+              {/* Mobile-only Close Button */}
+              <button
+                className="close-editor-button mobile-only"
+                onClick={() => setIsOpen(false)}
+              >
+                ←
+              </button>
+
               <button
                 className="detach-node-button"
                 onClick={() => {
