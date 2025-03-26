@@ -599,4 +599,8 @@
     font-size: 14px;
     flex-grow: 1;
   }
+
+    .landing-logo-section{
+      display: none;
+    }
 }
