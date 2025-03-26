@@ -34,14 +34,14 @@ const initialGraph = (stations) => {
   const retroRed = rootStyle.getPropertyValue('--retro-red').trim();
 
   const defaultStations = [
-    'Main Node',
-    'Local Station 1',
-    'Local Substation 1-1',
-    'Local Substation 1-2',
-    'Local Station 2',
-    'Local Substation 2-1',
-    'Local Substation 2-2',
-    'Local Station 3'
+  "Les Flachères", 
+  "Bellecour", 
+  "Confluence", 
+  "Lyon-Perrache", 
+  "Sathonay-Rillieux", 
+  "Vaise",
+  "Gare d'Oullins",
+  "Gorge de Loup"
   ];
 
   const combinedStations = stations.length > 0 ? stations.concat(defaultStations.slice(stations.length)) : defaultStations;
@@ -186,7 +186,7 @@ const loadGraph = async () => {
     }
   } catch (error) {
     console.error("Error loading graph from Google Drive:", error);
-    return [];
+    return null;
   }
 };
 
@@ -559,10 +559,18 @@ const App = () => {
 
         // Load the graph
         let graph = await loadGraph();
-        await fetchFileModifiedTime();
 
-        // If the graph is empty, initialize it with fetched station names or fallback
+        if (graph === null) {
+          // Failed to load graph — show error state
+          setIsGraphLoaded(false);
+          setIsOffline(true); // or trigger a dedicated error state
+          return;
+        }
+        
+        await fetchFileModifiedTime();
+        
         if (graph.length === 0) {
+          // normal "no file" case → proceed to initialize        
           graph = initialGraph(fetchedStations);
           await saveGraph(graph, setSaveStatus);
 

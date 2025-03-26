@@ -12,6 +12,7 @@
     color: black; /* Set text color to black */
     font-family: 'Press Start 2P', cursive; /* Retro pixelated font */
     font-size: 24px;
+    overflow: auto;
 }
 
 .loading-screen * {
