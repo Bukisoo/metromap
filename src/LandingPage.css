@@ -2,6 +2,7 @@
 body, html, #root {
   height: 100%;
   margin: 0;
+  overflow-y: auto;
 }
 
 /* Landing Page Container */
@@ -126,16 +127,46 @@ body, html, #root {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .landing-page {
+    height: auto;
+    overflow-y: auto;
+    padding-bottom: 80px; /* make room for footer if needed */
+  }
+
+  .landing-logo-section {
+    position: relative;
+    top: auto;
+    left: auto;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .landing-logo {
+    width: 80px;
+  }
+
+  .main-visual-image {
+    max-height: 30vh;
+    margin-top: -40px;
+  }
+
   .landing-title {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .landing-description {
-    column-count: 1; /* Switch to a single column for smaller screens */
+    column-count: 1;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 10px 20px;
   }
 
   .signin-button {
     padding: 10px 20px;
-    font-size: 1.2rem;
+    font-size: 1rem;
+  }
+
+  .landing-footer {
+    padding-bottom: 20px;
   }
 }
